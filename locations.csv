@@ -1,0 +1,4 @@
+Playground, an outdoor playground with slide and swing clearly visible., west = School, north = Beach, east = None,  south = None
+Beach, a wide open white sanded beach with a brown hill on the side., west = None, north = None, east = None, south = Playground
+School, a secondary school for local creatures with 3 two-story buildings., west = None, north = None, east = Playground,  south = None
+
