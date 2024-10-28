@@ -190,15 +190,18 @@ class Pymon(Creature):
     def pick_item(self, item):
         """Attempt to pick up an item."""
         if item.can_be_picked:
-            self._inventory.append(item)
+            self.inventory.append(item)
             print(f"You picked up {item.name} from the ground!")
         else:
             print(f"The {item.name} cannot be picked up.")
 
     def view_inventory(self):
         """Display the items in the inventory."""
-        if self._inventory:
+        if self.inventory:
             print("You are carrying: " + ', '.join([item.name for item in self.inventory]))
+            # Display in a list
+            for index, item in enumerate(self.inventory, start=1):
+                print(f"{index}) {item.name} - {item.description}")
         else:
             print("You have no items.")
 
@@ -228,6 +231,9 @@ class Pymon(Creature):
         wins, losses = 0, 0
         while wins < 2 and losses < 2 and self._energy > 0:
             player_choice = input("Your turn (r)ock, (p)aper, or (s)cissor?: ").lower()
+            if player_choice not in ["r", "p", "s"]:
+                print("Invalid choice, please choose r, p, or s.")
+                continue
             opponent_choice = random.choice(["r", "p", "s"])
             print(f"Your opponent issued {opponent_choice}!")
             result = self.resolve_battle(player_choice, opponent_choice)
@@ -259,7 +265,14 @@ class Pymon(Creature):
 
     def use_item(self, item_name):
         """Use an item from the inventory."""
-        item = next((i for i in self._inventory if i.name.lower() == item_name.lower()), None)
+        item = None
+        for index, i in enumerate(self._inventory, start=1):
+            try:
+                if index == int(item_name):
+                    item = i
+            except ValueError:
+                item = next((i for i in self._inventory if i.name.lower() == item_name.lower()), None)
+
         if not item:
             print(f"No item named {item_name} in the inventory.")
             return
@@ -460,8 +473,14 @@ class Operation:
             else:
                 print(f"There is no {item_name} in this location.")
         elif command == "5":
+            if not self.pymon.inventory:
+                print("You have no items.")
+                input("Press Enter to continue...")
+                return
+            input("a) Select item to use ").lower()
             self.pymon.view_inventory()
-            sub_command = input("a Select item to use (enter item name or 'back' to return): ").lower()
+
+            sub_command = input("Select an item or 'back' to return): ").lower()
             if sub_command != 'back':
                 self.pymon.use_item(sub_command)
         elif command == "6":
