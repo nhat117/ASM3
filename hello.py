@@ -5,22 +5,70 @@ import random
 # Location class
 class Location:
     def __init__(self, name, description):
-        self.name = name
-        self.description = description
-        self.doors = {"west": None, "north": None, "east": None, "south": None}
-        self.creatures = []
-        self.items = []
+        self._name = name
+        self._description = description
+        self._doors = {"west": None, "north": None, "east": None, "south": None}
+        self._creatures = []
+        self._items = []
 
-    def get_name(self):
-        return self.name
+    # Getter and setter for name
+    @property
+    def name(self):
+        return self._name
 
-    def get_description(self):
-        return self.description
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
+
+    # Getter and setter for description
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, new_description):
+        self._description = new_description
+
+    # Getter and setter for doors
+    @property
+    def doors(self):
+        return self._doors
+
+    @doors.setter
+    def doors(self, new_doors):
+        if isinstance(new_doors, dict):
+            self._doors = new_doors
+        else:
+            raise ValueError("Doors must be a dictionary")
+
+    # Getter and setter for creatures
+    @property
+    def creatures(self):
+        return self._creatures
+
+    @creatures.setter
+    def creatures(self, new_creatures):
+        if isinstance(new_creatures, list):
+            self._creatures = new_creatures
+        else:
+            raise ValueError("Creatures must be a list")
+
+    # Getter and setter for items
+    @property
+    def items(self):
+        return self._items
+
+    @items.setter
+    def items(self, new_items):
+        if isinstance(new_items, list):
+            self._items = new_items
+        else:
+            raise ValueError("Items must be a list")
 
     def connect(self, direction, location):
         """Connect this location to another one in a given direction."""
-        if direction in self.doors:
-            self.doors[direction] = location
+        if direction in self._doors:
+            self._doors[direction] = location
             # Connect the other location in the opposite direction
             if direction == "west":
                 location.doors["east"] = self
@@ -32,20 +80,20 @@ class Location:
                 location.doors["north"] = self
 
     def add_creature(self, creature):
-        self.creatures.append(creature)
+        self._creatures.append(creature)
 
     def add_item(self, item):
-        self.items.append(item)
+        self._items.append(item)
 
     def inspect(self):
-        print(f"You are at {self.name}. {self.description}")
-        if self.creatures:
-            for creature in self.creatures:
+        print(f"You are at {self._name}. {self._description}")
+        if self._creatures:
+            for creature in self._creatures:
                 print(f"Creature present: {creature.nickname} - {creature.description}")
         else:
             print("No creatures here.")
-        if self.items:
-            for item in self.items:
+        if self._items:
+            for item in self._items:
                 print(f"Item present: {item.name} - {item.description}")
         else:
             print("No items here.")
@@ -54,31 +102,94 @@ class Location:
 # Creature class
 class Creature:
     def __init__(self, nickname, description, location=None):
-        self.nickname = nickname
-        self.description = description
-        self.location = location
+        self._nickname = nickname
+        self._description = description
+        self._location = location
+
+    # Getter and setter for nickname
+    @property
+    def nickname(self):
+        return self._nickname
+
+    @nickname.setter
+    def nickname(self, new_nickname):
+        self._nickname = new_nickname
+
+    # Getter and setter for description
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, new_description):
+        self._description = new_description
+
+    # Getter and setter for location
+    @property
+    def location(self):
+        return self._location
+
+    @location.setter
+    def location(self, new_location):
+        self._location = new_location
 
 
 # Pymon class (inherits Creature)
 class Pymon(Creature):
     def __init__(self, nickname, description, location=None):
         super().__init__(nickname, description, location)
-        self.energy = 3
-        self.inventory = []  # Pymon inventory to store items
-        self.has_immunity = False
+        self._energy = 3
+        self._inventory = []  # Pymon inventory to store items
+        self._has_immunity = False
+
+    # Getter and setter for energy
+    @property
+    def energy(self):
+        return self._energy
+
+    @energy.setter
+    def energy(self, new_energy):
+        if 0 <= new_energy <= 3:
+            self._energy = new_energy
+        else:
+            raise ValueError("Energy must be between 0 and 3.")
+
+    # Getter and setter for inventory
+    @property
+    def inventory(self):
+        return self._inventory
+
+    @inventory.setter
+    def inventory(self, new_inventory):
+        if isinstance(new_inventory, list):
+            self._inventory = new_inventory
+        else:
+            raise ValueError("Inventory must be a list.")
+
+    # Getter and setter for has_immunity
+    @property
+    def has_immunity(self):
+        return self._has_immunity
+
+    @has_immunity.setter
+    def has_immunity(self, new_immunity):
+        if isinstance(new_immunity, bool):
+            self._has_immunity = new_immunity
+        else:
+            raise ValueError("has_immunity must be a boolean value.")
 
     def pick_item(self, item):
         """Attempt to pick up an item."""
         if item.can_be_picked:
-            self.inventory.append(item)
+            self._inventory.append(item)
             print(f"You picked up {item.name} from the ground!")
         else:
             print(f"The {item.name} cannot be picked up.")
 
     def view_inventory(self):
         """Display the items in the inventory."""
-        if self.inventory:
-            print("You are carrying: " + ', '.join([item.name for item in self.inventory]))
+        if self._inventory:
+            print("You are carrying: " + ', '.join([item.name for item in self._inventory]))
         else:
             print("You have no items.")
 
@@ -92,13 +203,13 @@ class Pymon(Creature):
                 f"There is no door to the {direction}. Pymon remains at its current location.")
 
     def inspect(self):
-        print(f"Pymon {self.nickname}: {self.description}, Energy: {self.energy}/3")
+        print(f"Pymon {self.nickname}: {self.description}, Energy: {self._energy}/3")
 
     def challenge(self, creature):
         """Challenge another Pymon to a battle."""
         print(f"{creature.nickname} gladly accepted your challenge! Ready for battle!")
         wins, losses = 0, 0
-        while wins < 2 and losses < 2 and self.energy > 0:
+        while wins < 2 and losses < 2 and self._energy > 0:
             player_choice = input("Your turn (r)ock, (p)aper, or (s)cissor?: ").lower()
             opponent_choice = random.choice(["r", "p", "s"])
             print(f"Your opponent issued {opponent_choice}!")
@@ -108,12 +219,12 @@ class Pymon(Creature):
                 print(f"You won 1 encounter!")
             elif result == "lose":
                 losses += 1
-                if not self.has_immunity:
-                    self.energy -= 1
-                    print(f"You lost 1 encounter and lost 1 energy. Energy: {self.energy}/3")
+                if not self._has_immunity:
+                    self._energy -= 1
+                    print(f"You lost 1 encounter and lost 1 energy. Energy: {self._energy}/3")
                 else:
-                    print(f"You lost 1 encounter but your immunity protected you. Energy: {self.energy}/3")
-                    self.has_immunity = False
+                    print(f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/3")
+                    self._has_immunity = False
 
         if wins == 2:
             print(f"Congrats! You won the battle and adopted a new Pymon called {creature.nickname}!")
@@ -131,21 +242,21 @@ class Pymon(Creature):
 
     def use_item(self, item_name):
         """Use an item from the inventory."""
-        item = next((i for i in self.inventory if i.name.lower() == item_name.lower()), None)
+        item = next((i for i in self._inventory if i.name.lower() == item_name.lower()), None)
         if not item:
             print(f"No item named {item_name} in the inventory.")
             return
 
         if item.name.lower() == "apple":
-            if self.energy < 3:
-                self.energy = min(3, self.energy + 1)
-                self.inventory.remove(item)
-                print(f"{self.nickname} ate the apple. Energy: {self.energy}/3")
+            if self._energy < 3:
+                self._energy = min(3, self._energy + 1)
+                self._inventory.remove(item)
+                print(f"{self.nickname} ate the apple. Energy: {self._energy}/3")
             else:
                 print(f"{self.nickname} is already at full energy.")
         elif item.name.lower() == "magic potion":
-            self.has_immunity = True
-            self.inventory.remove(item)
+            self._has_immunity = True
+            self._inventory.remove(item)
             print(f"{self.nickname} used the magic potion and is now immune for one battle.")
         elif item.name.lower() == "binocular":
             direction = input("Use binocular to view (current, west, north, east, south): ").lower()
