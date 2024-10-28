@@ -61,14 +61,14 @@ class Location:
     @items.setter
     def items(self, new_items):
         if isinstance(new_items, list):
-            self._items = new_items
+            self.items = new_items
         else:
             raise ValueError("Items must be a list")
 
     def connect(self, direction, location):
         """Connect this location to another one in a given direction."""
-        if direction in self._doors:
-            self._doors[direction] = location
+        if direction in self.doors:
+            self.doors[direction] = location
             # Connect the other location in the opposite direction
             if direction == "west":
                 location.doors["east"] = self
@@ -141,6 +141,7 @@ class Pymon(Creature):
         self._energy = 3
         self._inventory = []  # Pymon inventory to store items
         self._has_immunity = False
+        self._move_count = 0
 
     # Getter and setter for energy
     @property
@@ -178,6 +179,14 @@ class Pymon(Creature):
         else:
             raise ValueError("has_immunity must be a boolean value.")
 
+    @property
+    def move_count(self):
+        return self._move_count
+
+    @move_count.setter
+    def move_count(self, new_move_count):
+        self._move_count = new_move_count
+
     def pick_item(self, item):
         """Attempt to pick up an item."""
         if item.can_be_picked:
@@ -189,7 +198,7 @@ class Pymon(Creature):
     def view_inventory(self):
         """Display the items in the inventory."""
         if self._inventory:
-            print("You are carrying: " + ', '.join([item.name for item in self._inventory]))
+            print("You are carrying: " + ', '.join([item.name for item in self.inventory]))
         else:
             print("You have no items.")
 
@@ -197,10 +206,18 @@ class Pymon(Creature):
         if direction in self.location.doors and self.location.doors[direction]:
             new_location = self.location.doors[direction]
             self.location = new_location
-            print(f"You traveled {direction} and arrived at {new_location.get_name()}.")
+            print(f"You traveled {direction} and arrived at {new_location.name}.")
+
+            # Decrease energy after every 2 moves
+            self._move_count += 1
+            if self._move_count % 2 == 0:
+                self._energy -= 1
+                print(f"{self.nickname} lost 1 energy due to movement. Energy: {self._energy}/3")
+                if self._energy <= 0:
+                    print(f"{self.nickname} is out of energy and escaped into the wild. Game over.")
+                    sys.exit(0)
         else:
-            raise InvalidDirectionException(
-                f"There is no door to the {direction}. Pymon remains at its current location.")
+            raise InvalidDirectionException(f"There is no door to the {direction}.")
 
     def inspect(self):
         print(f"Pymon {self.nickname}: {self.description}, Energy: {self._energy}/3")
@@ -265,7 +282,7 @@ class Pymon(Creature):
             elif direction in self.location.doors and self.location.doors[direction]:
                 connected_location = self.location.doors[direction]
                 print(
-                    f"In the {direction}, there is {connected_location.get_name()}: {connected_location.get_description()}")
+                    f"In the {direction}, there is {connected_location.name()}: {connected_location.description()}")
             else:
                 print(f"This direction leads nowhere.")
         else:
@@ -275,17 +292,56 @@ class Pymon(Creature):
 # Item class
 class Item:
     def __init__(self, name, description, can_be_picked=True, effect=None):
-        self.name = name
-        self.description = description
-        self.can_be_picked = can_be_picked  # Some items can't be picked (e.g., trees)
-        self.effect = effect  # Effect of the item (e.g., "restore_energy", "grant_immunity")
+        self._name = name
+        self._description = description
+        self._can_be_picked = can_be_picked  # Some items can't be picked (e.g., trees)
+        self._effect = effect  # Effect of the item (e.g., "restore_energy", "grant_immunity")
+
+    # Getter and setter for name
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
+
+    # Getter and setter for description
+    @property
+    def description(self):
+        return self._description
+
+    @description.setter
+    def description(self, new_description):
+        self._description = new_description
+
+    # Getter and setter for can_be_picked
+    @property
+    def can_be_picked(self):
+        return self._can_be_picked
+
+    @can_be_picked.setter
+    def can_be_picked(self, new_can_be_picked):
+        if isinstance(new_can_be_picked, bool):
+            self._can_be_picked = new_can_be_picked
+        else:
+            raise ValueError("can_be_picked must be a boolean value.")
+
+    # Getter and setter for effect
+    @property
+    def effect(self):
+        return self._effect
+
+    @effect.setter
+    def effect(self, new_effect):
+        self._effect = new_effect
 
     def apply(self, pymon):
         """Apply the effect of the item to the Pymon."""
-        if self.effect == "restore_energy":
+        if self._effect == "restore_energy":
             pymon.energy = min(3, pymon.energy + 1)
             print(f"{pymon.nickname}'s energy is restored! Energy: {pymon.energy}/3")
-        elif self.effect == "grant_immunity":
+        elif self._effect == "grant_immunity":
             pymon.has_immunity = True
             print(f"{pymon.nickname} is now immune for one battle!")
 
@@ -293,8 +349,32 @@ class Item:
 # Record class to load initial locations and creatures
 class Record:
     def __init__(self):
-        self.locations = []
-        self.creatures = []
+        self._locations = []
+        self._creatures = []
+
+    # Getter and setter for locations
+    @property
+    def locations(self):
+        return self._locations
+
+    @locations.setter
+    def locations(self, new_locations):
+        if isinstance(new_locations, list):
+            self._locations = new_locations
+        else:
+            raise ValueError("Locations must be a list.")
+
+    # Getter and setter for creatures
+    @property
+    def creatures(self):
+        return self._creatures
+
+    @creatures.setter
+    def creatures(self, new_creatures):
+        if isinstance(new_creatures, list):
+            self._creatures = new_creatures
+        else:
+            raise ValueError("Creatures must be a list.")
 
     def load_data(self):
         """Load data for locations and creatures."""
@@ -319,6 +399,7 @@ class Record:
         school.add_item(Item("Binocular", "Allows quick review of surroundings"))
         playground.add_item(Item("Tree", "Just a tree, cannot be picked up", can_be_picked=False))
 
+        # Use the setters for locations and creatures
         self.locations = [playground, beach, school]
         self.creatures = [creature1, creature2]
 
@@ -326,8 +407,26 @@ class Record:
 # Operation class
 class Operation:
     def __init__(self, pymon, record):
-        self.pymon = pymon
-        self.record = record
+        self._pymon = pymon
+        self._record = record
+
+    # Getter and setter for pymon
+    @property
+    def pymon(self):
+        return self._pymon
+
+    @pymon.setter
+    def pymon(self, new_pymon):
+        self._pymon = new_pymon
+
+    # Getter and setter for record
+    @property
+    def record(self):
+        return self._record
+
+    @record.setter
+    def record(self, new_record):
+        self._record = new_record
 
     def display_menu(self):
         """Display the menu options."""
@@ -338,19 +437,8 @@ class Operation:
         print("4) Pick an item")
         print("5) View inventory")
         print("6) Challenge a creature")
-        print("7) Use an item")
+        print("7) Generate stats")
         print("8) Exit the program")
-
-    def get_command(self):
-        """Get the command from the user."""
-        return input("Your command: ")
-
-    def menu(self):
-        """Provide options for the player to choose."""
-        while True:
-            self.display_menu()
-            command = self.get_command()
-            self.command_multiplexer(command)
 
     def command_multiplexer(self, command):
         """Execute the command based on user input."""
@@ -366,7 +454,6 @@ class Operation:
                 print(e)
         elif command == "4":
             item_name = input("Picking what item?: ").lower()
-            # Find the item in the current location
             item = next((i for i in self.pymon.location.items if i.name.lower() == item_name), None)
             if item:
                 self.pymon.pick_item(item)
@@ -374,6 +461,9 @@ class Operation:
                 print(f"There is no {item_name} in this location.")
         elif command == "5":
             self.pymon.view_inventory()
+            sub_command = input("a Select item to use (enter item name or 'back' to return): ").lower()
+            if sub_command != 'back':
+                self.pymon.use_item(sub_command)
         elif command == "6":
             creature_name = input("Challenge who?: ").lower()
             creature = next((c for c in self.pymon.location.creatures if c.nickname.lower() == creature_name), None)
@@ -382,16 +472,25 @@ class Operation:
             else:
                 print(f"There is no creature named {creature_name} here.")
         elif command == "7":
-            item_name = input("Using what item?: ").lower()
-            try:
-                self.pymon.use_item(item_name)
-            except InvalidDirectionException as e:
-                print(e)
+            self.generate_stats()
         elif command == "8":
             print("Exiting the program.")
             sys.exit(0)
         else:
             print("Invalid command, please try again.")
+
+    def menu(self):
+        while True:
+            self.display_menu()
+            command = input("Enter your command: ")
+            self.command_multiplexer(command)
+
+    def generate_stats(self):
+        """Generate and display stats."""
+        print(f"Pymon {self.pymon.nickname} Stats:")
+        print(f"Energy: {self.pymon.energy}/3")
+        print(f"Inventory: {', '.join([item.name for item in self.pymon.inventory])}")
+        print(f"Location: {self.pymon.location.name}")
 
 
 ################ Custom exceptions########3
