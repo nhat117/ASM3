@@ -8,6 +8,8 @@ from location import Location
 from creature import Pymon, Animal
 from record import Record
 from exceptions import InvalidDirectionException
+
+
 # Operation class
 class Operation:
     def __init__(self, pymon, record):

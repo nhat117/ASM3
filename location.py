@@ -97,4 +97,3 @@ class Location:
                 print(f"Item present: {item.name} - {item.description}")
         else:
             print("No items here.")
-Ø

@@ -1,7 +1,4 @@
 # Creature class
-import sys
-import random
-import datetime
 from exceptions import *
 
 
@@ -103,6 +100,10 @@ class Pymon(Creature):
 
     def pick_item(self, item):
         """Attempt to pick up an item."""
+        if item.name.lower() == "tree":
+            print("The tree is just for decoration and cannot be picked up.")
+            return
+            
         if item.can_be_picked:
             self.inventory.append(item)
             print(f"You picked up {item.name} from the ground!")
@@ -124,7 +125,7 @@ class Pymon(Creature):
             if item_choice.isdigit():
                 item_index = int(item_choice) - 1
                 if 0 <= item_index < len(self.inventory):
-                    self.use_item(self.inventory[item_index].name)
+                    self.use_item(self.inventory[item_index])
                 else:
                     print("Invalid item number.")
             elif item_choice:
@@ -163,6 +164,8 @@ class Pymon(Creature):
     def challenge(self, creature):
         print(f"{creature.nickname} gladly accepted your challenge! Ready for battle!")
         wins, losses, draws = 0, 0, 0
+        had_immunity = self._has_immunity  # Store initial immunity state
+        
         while wins < 2 and losses < 2 and self._energy > 0:
             player_choice = input("Your turn (r)ock, (p)aper, or (s)cissor?: ").lower()
             if player_choice not in ["r", "p", "s"]:
@@ -185,9 +188,16 @@ class Pymon(Creature):
                     print(
                         f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/3"
                     )
-                    self._has_immunity = False
+                    self._has_immunity = False  # Remove immunity after it's used
             else:
                 draws += 1
+
+        # Remove magic potion from inventory after battle if immunity was used
+        if had_immunity:
+            for item in self._inventory[:]:  # Create a copy to safely modify during iteration
+                if item.name.lower() == "magic potion":
+                    self._inventory.remove(item)
+                    break
 
         timestamp = datetime.datetime.now().strftime("%d/%m/%Y %I:%M%p")
         self._battle_stats.append(
@@ -234,21 +244,14 @@ class Pymon(Creature):
         }
         return outcomes.get((player_choice, opponent_choice))
 
-    def use_item(self, item_name):
+    def use_item(self, item):
         """Use an item from the inventory."""
-        item = None
-        for index, i in enumerate(self._inventory, start=1):
-            try:
-                if index == int(item_name):
-                    item = i
-            except ValueError:
-                item = next(
-                    (i for i in self._inventory if i.name.lower() == item_name.lower()),
-                    None,
-                )
-
         if not item:
-            print(f"No item named {item_name} in the inventory.")
+            print("Invalid item.")
+            return
+
+        if item.name.lower() == "tree":
+            print("Trees are just for decoration and cannot be used.")
             return
 
         if item.name.lower() == "apple":
@@ -258,27 +261,49 @@ class Pymon(Creature):
                 print(f"{self.nickname} ate the apple. Energy: {self._energy}/3")
             else:
                 print(f"{self.nickname} is already at full energy.")
+        
         elif item.name.lower() == "magic potion":
-            self._has_immunity = True
-            self._inventory.remove(item)
-            print(
-                f"{self.nickname} used the magic potion and is now immune for one battle."
-            )
-        elif item.name.lower() == "binocular":
-            direction = input(
-                "Use binocular to view (current, west, north, east, south): "
-            ).lower()
-            if direction == "current":
-                self.location.inspect()
-            elif direction in self.location.doors and self.location.doors[direction]:
-                connected_location = self.location.doors[direction]
-                print(
-                    f"In the {direction}, there is {connected_location.name}: {connected_location.description}"
-                )
+            if not self._has_immunity:
+                self._has_immunity = True
+                print(f"{self.nickname} used the magic potion and is now immune for one battle.")
             else:
-                print(f"This direction leads nowhere.")
+                print(f"{self.nickname} already has immunity active.")
+        
+        elif item.name.lower() == "binocular":
+            direction = input("Use binocular to view (current/west/north/east/south): ").lower()
+            
+            if direction == "current":
+                # Get current location details
+                location_desc = []
+                if self.location.creatures:
+                    creatures = [c.nickname for c in self.location.creatures if c != self]
+                    if creatures:
+                        location_desc.append(", ".join(creatures))
+                
+                # Add connected locations
+                for dir, loc in self.location.doors.items():
+                    if loc:
+                        location_desc.append(f"in the {dir} is {loc.name}")
+                
+                if location_desc:
+                    print(", ".join(location_desc))
+                else:
+                    print("Nothing notable in the current location.")
+            
+            elif direction in ["west", "north", "east", "south"]:
+                if direction in self.location.doors and self.location.doors[direction]:
+                    connected_location = self.location.doors[direction]
+                    items = [item.name for item in connected_location.items] if hasattr(connected_location, 'items') else []
+                    if items:
+                        print(f"In the {direction}, there seems to be {connected_location.name} with {', '.join(items)}")
+                    else:
+                        print(f"In the {direction}, there seems to be {connected_location.name}")
+                else:
+                    print("This direction leads nowhere")
+            else:
+                print("Invalid direction for binocular use.")
         else:
-            print(f"{item_name} cannot be used.")
+            print(f"{item.name} cannot be used.")
 
 
 # Animal class (inherits Creature)
