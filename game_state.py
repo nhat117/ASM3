@@ -1,3 +1,7 @@
+import sys
+import random
+import datetime
+
 class GameState:
     def __init__(self):
         self.items = {}  # Dictionary to store items and their locations
@@ -8,7 +12,7 @@ class GameState:
             'inventory': []
         }
 
-    def save_game(self, file_path='save_game.txt'):
+    def save_game(self, file_path='save2024.csv'):
         print("Saving game...")
         print(f"Items: {self.items}")
         print(f"Pymons: {self.pymons}")
@@ -19,7 +23,7 @@ class GameState:
             file.write(f"Pymons: {self.pymons}\n")
             file.write(f"User Pymon: {self.user_pymon}\n")
 
-    def load_game(self, file_path='save_game.txt'):
+    def load_game(self, file_path='save2024.csv'):
         # Deserialize the game state from a text file
         with open(file_path, 'r') as file:
             lines = file.readlines()
