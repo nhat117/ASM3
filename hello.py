@@ -209,7 +209,7 @@ class Pymon(Creature):
             print(f"The {item.name} cannot be picked up.")
 
     def view_inventory(self):
-        """Display the items in the inventory."""
+        """Display the items in the inventory and allow using an item."""
         if self.inventory:
             print(
                 "You are carrying: " + ", ".join([item.name for item in self.inventory])
@@ -217,6 +217,17 @@ class Pymon(Creature):
             # Display in a list
             for index, item in enumerate(self.inventory, start=1):
                 print(f"{index}) {item.name} - {item.description}")
+
+            # Allow user to select an item to use
+            item_choice = input("Select an item number to use or press Enter to skip: ")
+            if item_choice.isdigit():
+                item_index = int(item_choice) - 1
+                if 0 <= item_index < len(self.inventory):
+                    self.use_item(self.inventory[item_index].name)
+                else:
+                    print("Invalid item number.")
+            elif item_choice:
+                print("Invalid input.")
         else:
             print("You have no items.")
 
@@ -225,6 +236,10 @@ class Pymon(Creature):
             new_location = self.location.doors[direction]
             self.location = new_location
             print(f"You traveled {direction} and arrived at {new_location.name}.")
+            # Debug: Print creatures in the new location
+            print("Creatures in the new location:")
+            for creature in new_location.creatures:
+                print(f"- {creature.nickname}")
 
             # Decrease energy after every 2 moves
             self._move_count += 1
@@ -357,7 +372,7 @@ class Pymon(Creature):
             elif direction in self.location.doors and self.location.doors[direction]:
                 connected_location = self.location.doors[direction]
                 print(
-                    f"In the {direction}, there is {connected_location.name()}: {connected_location.description()}"
+                    f"In the {direction}, there is {connected_location.name}: {connected_location.description}"
                 )
             else:
                 print(f"This direction leads nowhere.")
@@ -521,6 +536,19 @@ class Record:
                     else Animal(nickname.strip(), description.strip())
                 )
                 creatures.append(creature)
+        
+        # Randomly assign creatures to locations
+        location_count = len(self._locations)
+        for i, creature in enumerate(creatures):
+            location_index = i % location_count
+            creature.location = self._locations[location_index]
+            creature.location.add_creature(creature)  # Add creature to the location
+
+        # Debug: Print creatures assigned to each location
+        for location in self._locations:
+            print(f"Location: {location.name}")
+            for creature in location.creatures:
+                print(f"- {creature.nickname}")
         return creatures
 
     def _load_items(self, filename):
@@ -533,20 +561,6 @@ class Record:
                 name, description = parts
                 item = Item(name.strip(), description.strip())
                 random.choice(self._locations).add_item(item)
-
-    def save_game(self, filename="save2024.csv"):
-        with open(filename, "w") as file:
-            for location in self._locations:
-                doors = ", ".join(
-                    [
-                        f"{direction} = {loc}"
-                        for direction, loc in location.doors.items()
-                    ]
-                )
-                file.write(f"{location.name}, {location.description}, {doors}\n")
-
-    def load_game(self, filename="save2024.csv"):
-        self._locations = self._load_locations(filename)
 
 
 # Operation class
@@ -705,28 +719,38 @@ class Operation:
     def add_custom_location(self):
         name = input("Enter location name: ")
         description = input("Enter location description: ")
-        
+
         doors = {}
         for direction in ["west", "north", "east", "south"]:
-            connect = input(f"Do you want to connect a location to the {direction}? (yes/no): ").strip().lower()
+            connect = (
+                input(
+                    f"Do you want to connect a location to the {direction}? (yes/no): "
+                )
+                .strip()
+                .lower()
+            )
             if connect == "yes":
                 doors[direction] = input(f"Enter {direction} door: ").strip()
             else:
                 doors[direction] = "None"
-        
+
         location = Location(name, description)
         location.doors = doors
         self.record.locations.append(location)
-        
+
         with open("locations.csv", "r") as file:
             lines = file.readlines()
-        
+
         with open("locations.csv", "a") as file:
             if any(not line.strip() for line in lines):
-                file.write(f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n")
+                file.write(
+                    f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n"
+                )
             else:
                 file.write("\n")
-                file.write(f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n")
+                file.write(
+                    f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n"
+                )
         print("Custom location added.")
 
     def add_custom_creature(self):
@@ -740,10 +764,10 @@ class Operation:
         )
 
         self.record.creatures.append(creature)
-        
+
         with open("creatures.csv", "r") as file:
             lines = file.readlines()
-        
+
         with open("creatures.csv", "a") as file:
             if any(not line.strip() for line in lines):
                 file.write(f"{nickname}, {description}, {adoptable}\n")
@@ -768,7 +792,7 @@ class InvalidInputFileFormat(Exception):
         super().__init__(message)
 
 
-############ Main function to run the game#########
+############### Main function to run the game ############
 if __name__ == "__main__":
     record = Record()
     if len(sys.argv) == 1:

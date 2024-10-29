@@ -9,6 +9,10 @@ class GameState:
         }
 
     def save_game(self, file_path='save_game.txt'):
+        print("Saving game...")
+        print(f"Items: {self.items}")
+        print(f"Pymons: {self.pymons}")
+        
         # Serialize the game state to a text file
         with open(file_path, 'w') as file:
             file.write(f"Items: {self.items}\n")
@@ -22,16 +26,3 @@ class GameState:
             self.items = eval(lines[0].split(": ", 1)[1].strip())
             self.pymons = eval(lines[1].split(": ", 1)[1].strip())
             self.user_pymon = eval(lines[2].split(": ", 1)[1].strip())
-
-# Example usage
-game_state = GameState()
-game_state.items = {'sword': 'castle', 'shield': 'forest'}
-game_state.pymons = {'pymon1': {'location': 'cave', 'stats': {'hp': 100, 'attack': 50}}}
-game_state.user_pymon = {
-    'location': 'village',
-    'stats': {'hp': 120, 'attack': 60},
-    'inventory': ['potion', 'elixir']
-}
-
-game_state.save_game()
-game_state.load_game()
