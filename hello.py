@@ -1,6 +1,7 @@
 import sys
 import random
 import datetime
+
 # Import the GameState class
 from game_state import GameState
 
@@ -210,7 +211,9 @@ class Pymon(Creature):
     def view_inventory(self):
         """Display the items in the inventory."""
         if self.inventory:
-            print("You are carrying: " + ', '.join([item.name for item in self.inventory]))
+            print(
+                "You are carrying: " + ", ".join([item.name for item in self.inventory])
+            )
             # Display in a list
             for index, item in enumerate(self.inventory, start=1):
                 print(f"{index}) {item.name} - {item.description}")
@@ -227,9 +230,13 @@ class Pymon(Creature):
             self._move_count += 1
             if self._move_count % 2 == 0:
                 self._energy -= 1
-                print(f"{self.nickname} lost 1 energy due to movement. Energy: {self._energy}/3")
+                print(
+                    f"{self.nickname} lost 1 energy due to movement. Energy: {self._energy}/3"
+                )
                 if self._energy <= 0:
-                    print(f"{self.nickname} is out of energy and escaped into the wild. Game over.")
+                    print(
+                        f"{self.nickname} is out of energy and escaped into the wild. Game over."
+                    )
                     sys.exit(0)
         else:
             raise InvalidDirectionException(f"There is no door to the {direction}.")
@@ -255,44 +262,59 @@ class Pymon(Creature):
                 losses += 1
                 if not self._has_immunity:
                     self._energy -= 1
-                    print(f"You lost 1 encounter and lost 1 energy. Energy: {self._energy}/3")
+                    print(
+                        f"You lost 1 encounter and lost 1 energy. Energy: {self._energy}/3"
+                    )
                 else:
-                    print(f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/3")
+                    print(
+                        f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/3"
+                    )
                     self._has_immunity = False
             else:
                 draws += 1
 
         timestamp = datetime.datetime.now().strftime("%d/%m/%Y %I:%M%p")
-        self._battle_stats.append({
-            "timestamp": timestamp,
-            "opponent": creature.nickname,
-            "wins": wins,
-            "draws": draws,
-            "losses": losses
-        })
+        self._battle_stats.append(
+            {
+                "timestamp": timestamp,
+                "opponent": creature.nickname,
+                "wins": wins,
+                "draws": draws,
+                "losses": losses,
+            }
+        )
 
         if wins == 2:
-            print(f"Congrats! You won the battle and adopted a new Pymon called {creature.nickname}!")
+            print(
+                f"Congrats! You won the battle and adopted a new Pymon called {creature.nickname}!"
+            )
         else:
             print("You lost the battle!")
 
     def display_battle_stats(self):
         total_wins, total_draws, total_losses = 0, 0, 0
-        print(f"Pymon Nickname: \"{self.nickname}\"")
+        print(f'Pymon Nickname: "{self.nickname}"')
         for i, stat in enumerate(self._battle_stats, start=1):
             print(
-                f"Battle {i}, {stat['timestamp']} Opponent: \"{stat['opponent']}\", W: {stat['wins']} D: {stat['draws']} L: {stat['losses']}")
-            total_wins += stat['wins']
-            total_draws += stat['draws']
-            total_losses += stat['losses']
+                f"Battle {i}, {stat['timestamp']} Opponent: \"{stat['opponent']}\", W: {stat['wins']} D: {stat['draws']} L: {stat['losses']}"
+            )
+            total_wins += stat["wins"]
+            total_draws += stat["draws"]
+            total_losses += stat["losses"]
         print(f"Total: W: {total_wins} D: {total_draws} L: {total_losses}")
 
     def resolve_battle(self, player_choice, opponent_choice):
         """Resolve the rock-paper-scissor battle."""
         outcomes = {
-            ('r', 'r'): 'draw', ('r', 'p'): 'lose', ('r', 's'): 'win',
-            ('p', 'r'): 'win', ('p', 'p'): 'draw', ('p', 's'): 'lose',
-            ('s', 'r'): 'lose', ('s', 'p'): 'win', ('s', 's'): 'draw'
+            ("r", "r"): "draw",
+            ("r", "p"): "lose",
+            ("r", "s"): "win",
+            ("p", "r"): "win",
+            ("p", "p"): "draw",
+            ("p", "s"): "lose",
+            ("s", "r"): "lose",
+            ("s", "p"): "win",
+            ("s", "s"): "draw",
         }
         return outcomes.get((player_choice, opponent_choice))
 
@@ -304,7 +326,10 @@ class Pymon(Creature):
                 if index == int(item_name):
                     item = i
             except ValueError:
-                item = next((i for i in self._inventory if i.name.lower() == item_name.lower()), None)
+                item = next(
+                    (i for i in self._inventory if i.name.lower() == item_name.lower()),
+                    None,
+                )
 
         if not item:
             print(f"No item named {item_name} in the inventory.")
@@ -320,19 +345,33 @@ class Pymon(Creature):
         elif item.name.lower() == "magic potion":
             self._has_immunity = True
             self._inventory.remove(item)
-            print(f"{self.nickname} used the magic potion and is now immune for one battle.")
+            print(
+                f"{self.nickname} used the magic potion and is now immune for one battle."
+            )
         elif item.name.lower() == "binocular":
-            direction = input("Use binocular to view (current, west, north, east, south): ").lower()
+            direction = input(
+                "Use binocular to view (current, west, north, east, south): "
+            ).lower()
             if direction == "current":
                 self.location.inspect()
             elif direction in self.location.doors and self.location.doors[direction]:
                 connected_location = self.location.doors[direction]
                 print(
-                    f"In the {direction}, there is {connected_location.name()}: {connected_location.description()}")
+                    f"In the {direction}, there is {connected_location.name()}: {connected_location.description()}"
+                )
             else:
                 print(f"This direction leads nowhere.")
         else:
             print(f"{item_name} cannot be used.")
+
+
+# Animal class (inherits Creature)
+class Animal(Creature):
+    def __init__(self, nickname, description, location=None):
+        super().__init__(nickname, description, location)
+
+    def inspect(self):
+        print(f"Animal {self.nickname}: {self.description}")
 
 
 # Item class
@@ -341,7 +380,9 @@ class Item:
         self._name = name
         self._description = description
         self._can_be_picked = can_be_picked  # Some items can't be picked (e.g., trees)
-        self._effect = effect  # Effect of the item (e.g., "restore_energy", "grant_immunity")
+        self._effect = (
+            effect  # Effect of the item (e.g., "restore_energy", "grant_immunity")
+        )
 
     # Getter and setter for name
     @property
@@ -422,7 +463,12 @@ class Record:
         else:
             raise ValueError("Creatures must be a list.")
 
-    def load_data(self, locations_file='locations.csv', creatures_file='creatures.csv', items_file='items.csv'):
+    def load_data(
+        self,
+        locations_file="locations.csv",
+        creatures_file="creatures.csv",
+        items_file="items.csv",
+    ):
         self._locations = self._load_locations(locations_file)
         self._creatures = self._load_creatures(creatures_file)
         self._load_items(items_file)
@@ -430,68 +476,76 @@ class Record:
     def _load_locations(self, filename):
         locations = []
         location_dict = {}  # Dictionary to map location names to Location objects
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             for line in file:
                 line = line.strip()
                 if not line:
                     continue
-                parts = line.split(',')
+                parts = line.split(",")
                 name, description, *doors = parts
                 location = Location(name.strip(), description.strip())
                 locations.append(location)
                 location_dict[name.strip()] = location  # Map name to Location object
 
         # Second pass to connect locations
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             for line in file:
                 line = line.strip()
                 if not line:
                     continue
-                parts = line.split(',')
+                parts = line.split(",")
                 name, description, *doors = parts
                 location = location_dict[name.strip()]
                 for door in doors:
-                    direction, connected_location_name = door.split('=')
-                    connected_location = location_dict.get(connected_location_name.strip())
+                    direction, connected_location_name = door.split("=")
+                    connected_location = location_dict.get(
+                        connected_location_name.strip()
+                    )
                     if connected_location:
                         location.doors[direction.strip()] = connected_location
 
         return locations
 
-
     def _load_creatures(self, filename):
         creatures = []
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             for line in file:
                 line = line.strip()
                 if not line:
                     continue
-                parts = line.split(',')
+                parts = line.split(",")
                 nickname, description, adoptable = parts
-                creature = Pymon(nickname.strip(),
-                                 description.strip()) if adoptable.strip().lower() == 'yes' else Creature(
-                    nickname.strip(), description.strip())
+                creature = (
+                    Pymon(nickname.strip(), description.strip())
+                    if adoptable.strip().lower() == "yes"
+                    else Animal(nickname.strip(), description.strip())
+                )
                 creatures.append(creature)
         return creatures
 
     def _load_items(self, filename):
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             for line in file:
                 line = line.strip()
                 if not line:
                     continue
-                parts = line.split(',')
+                parts = line.split(",")
                 name, description = parts
                 item = Item(name.strip(), description.strip())
                 random.choice(self._locations).add_item(item)
 
-    def save_game(self, filename='save2024.csv'):
-        with open(filename, 'w') as file:
+    def save_game(self, filename="save2024.csv"):
+        with open(filename, "w") as file:
             for location in self._locations:
-                doors = ', '.join([f"{direction} = {loc}" for direction, loc in location.doors.items()])
+                doors = ", ".join(
+                    [
+                        f"{direction} = {loc}"
+                        for direction, loc in location.doors.items()
+                    ]
+                )
                 file.write(f"{location.name}, {location.description}, {doors}\n")
 
-    def load_game(self, filename='save2024.csv'):
+    def load_game(self, filename="save2024.csv"):
         self._locations = self._load_locations(filename)
 
 
@@ -549,7 +603,10 @@ class Operation:
                 print(e)
         elif command == "4":
             item_name = input("Picking what item?: ").lower()
-            item = next((i for i in self.pymon.location.items if i.name.lower() == item_name), None)
+            item = next(
+                (i for i in self.pymon.location.items if i.name.lower() == item_name),
+                None,
+            )
             if item:
                 self.pymon.pick_item(item)
             else:
@@ -558,7 +615,14 @@ class Operation:
             self.pymon.view_inventory()
         elif command == "6":
             creature_name = input("Challenge who?: ").lower()
-            creature = next((c for c in self.pymon.location.creatures if c.nickname.lower() == creature_name), None)
+            creature = next(
+                (
+                    c
+                    for c in self.pymon.location.creatures
+                    if c.nickname.lower() == creature_name
+                ),
+                None,
+            )
             if creature:
                 self.pymon.challenge(creature)
             else:
@@ -567,22 +631,56 @@ class Operation:
             self.pymon.display_battle_stats()
         elif command == "8":
             # Use GameState to save the game
-            self._game_state.items = {item.name: item.location for item in self._record.locations}
-            self._game_state.pymons = {pymon.nickname: {'location': pymon.location, 'stats': pymon.battle_stats} for
-                                       pymon in self._record.creatures}
-            self._game_state.user_pymon = {
-                'location': self._pymon.location,
-                'stats': self._pymon.battle_stats,
-                'inventory': [item.name for item in self._pymon.inventory]
+            self._game_state.items = {
+                item.name: location.name
+                for location in self._record.locations
+                for item in location.items
             }
+
+            self._game_state.pymons = {
+                pymon.nickname: {
+                    "location": pymon.location,
+                    "stats": pymon.battle_stats if isinstance(pymon, Pymon) else None,
+                }
+                for pymon in self._record.creatures
+            }
+
+            self._game_state.user_pymon = {
+                "location": self._pymon.location,
+                "stats": self._pymon.battle_stats,
+                "inventory": [item.name for item in self._pymon.inventory],
+            }
+
+        elif command == "8":  # Use GameState to save the game
+            self._game_state.items = {
+                item.name: location.name
+                for location in self._record.locations
+                for item in location.items
+            }
+
+            self._game_state.pymons = {
+                pymon.nickname: {
+                    "location": pymon.location.name,
+                    "stats": pymon.battle_stats if isinstance(pymon, Pymon) else None,
+                }
+                for pymon in self._record.creatures
+            }
+            self._game_state.user_pymon = {
+                "location": self._pymon.location.name,
+                "stats": self._pymon.battle_stats,
+                "inventory": [item.name for item in self._pymon.inventory],
+            }
+
             self._game_state.save_game()
             print("Game progress saved.")
         elif command == "9":
             # Use GameState to load the game
             self._game_state.load_game()
             print("Game progress loaded.")
+
         elif command == "10":
             self.add_custom_location()
+
         elif command == "11":
             self.add_custom_creature()
         elif command == "12":
@@ -601,35 +699,57 @@ class Operation:
         """Generate and display stats."""
         print(f"Pymon {self.pymon.nickname} Stats:")
         print(f"Energy: {self.pymon.energy}/3")
-        print(f"Inventory: {', '.join([item.name for item in self.pymon.inventory])}")
+        print(f"Inventory: {', '.join([item.name for item in self._pymon.inventory])}")
         print(f"Location: {self.pymon.location.name}")
 
     def add_custom_location(self):
         name = input("Enter location name: ")
         description = input("Enter location description: ")
-        doors = {
-            "west": input("Enter west door: "),
-            "north": input("Enter north door: "),
-            "east": input("Enter east door: "),
-            "south": input("Enter south door: ")
-        }
+        
+        doors = {}
+        for direction in ["west", "north", "east", "south"]:
+            connect = input(f"Do you want to connect a location to the {direction}? (yes/no): ").strip().lower()
+            if connect == "yes":
+                doors[direction] = input(f"Enter {direction} door: ").strip()
+            else:
+                doors[direction] = "None"
+        
         location = Location(name, description)
         location.doors = doors
         self.record.locations.append(location)
-        with open('locations.csv', 'a') as file:
-            file.write(
-                f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n")
+        
+        with open("locations.csv", "r") as file:
+            lines = file.readlines()
+        
+        with open("locations.csv", "a") as file:
+            if any(not line.strip() for line in lines):
+                file.write(f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n")
+            else:
+                file.write("\n")
+                file.write(f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n")
         print("Custom location added.")
 
     def add_custom_creature(self):
         nickname = input("Enter creature nickname: ")
         description = input("Enter creature description: ")
         adoptable = input("Is this creature adoptable (yes/no)?: ").lower()
-        creature = Pymon(nickname, description) if adoptable == 'yes' else Creature(nickname, description)
+        creature = (
+            Pymon(nickname, description)
+            if adoptable == "yes"
+            else Animal(nickname, description)
+        )
 
         self.record.creatures.append(creature)
-        with open('creatures.csv', 'a') as file:
-            file.write(f"{nickname}, {description}, {adoptable}\n")
+        
+        with open("creatures.csv", "r") as file:
+            lines = file.readlines()
+        
+        with open("creatures.csv", "a") as file:
+            if any(not line.strip() for line in lines):
+                file.write(f"{nickname}, {description}, {adoptable}\n")
+            else:
+                file.write("\n")
+                file.write(f"{nickname}, {description}, {adoptable}\n")
         print("Custom creature added.")
 
 
@@ -658,9 +778,16 @@ if __name__ == "__main__":
     elif len(sys.argv) == 3:
         record.load_data(locations_file=sys.argv[1], creatures_file=sys.argv[2])
     elif len(sys.argv) == 4:
-        record.load_data(locations_file=sys.argv[1], creatures_file=sys.argv[2], items_file=sys.argv[3])
+        record.load_data(
+            locations_file=sys.argv[1],
+            creatures_file=sys.argv[2],
+            items_file=sys.argv[3],
+        )
 
-    pymon = Pymon("Kimimon", "White and yellow Pymon with a square face", random.choice(record.locations))
+    pymon = Pymon(
+        "Kimimon",
+        "White and yellow Pymon with a square face",
+        random.choice(record.locations),
+    )
     operation = Operation(pymon, record)
     operation.menu()
-
