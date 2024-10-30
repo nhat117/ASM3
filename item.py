@@ -1,8 +1,3 @@
-# Item class
-import sys
-import random
-import datetime
-
 MAX_ENERGY = 3
 ENERGY_PLUS_RATE = 1
 
@@ -16,7 +11,6 @@ class Item:
             effect  # Effect of the item (e.g., "restore_energy", "grant_immunity")
         )
 
-    # Getter and setter for name
     @property
     def name(self):
         return self._name
@@ -25,7 +19,6 @@ class Item:
     def name(self, new_name):
         self._name = new_name
 
-    # Getter and setter for description
     @property
     def description(self):
         return self._description
@@ -34,7 +27,6 @@ class Item:
     def description(self, new_description):
         self._description = new_description
 
-    # Getter and setter for can_be_picked
     @property
     def can_be_picked(self):
         return self._can_be_picked
@@ -46,7 +38,6 @@ class Item:
         else:
             raise ValueError("can_be_picked must be a boolean value.")
 
-    # Getter and setter for effect
     @property
     def effect(self):
         return self._effect

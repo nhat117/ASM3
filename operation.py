@@ -46,15 +46,24 @@ class Operation:
     def record(self, new_record):
         self._record = new_record
 
+    @property
+    def game_state(self):
+        """Getter for the game state."""
+        return self._game_state
+
+    @game_state.setter
+    def game_state(self, new_game_state):
+        self._game_state = new_game_state
+
     def display_setup(self):
         """
         Display the current setup of the game world including locations, connections,
         items, and creatures.
         """
-        print("\n=== Game World Setup ===\n")
+        print("\n###### Game World Setup ##########\n")
 
         # Display Locations and their connections
-        print("=== Locations ===")
+        print("###### Locations ##########")
         for location in self._record.locations:
             print(f"\nLocation: {location.name}")
             print(f"Description: {location.description}")
@@ -77,7 +86,7 @@ class Operation:
                 print("  No connections")
 
         # Display Items
-        print("\n=== Items ===")
+        print("\n###### Items ##########")
         for location in self._record.locations:
             for item in location.items:
                 print(f"\nItem: {item.name}")
@@ -85,7 +94,7 @@ class Operation:
                 print(f"Can be picked: {item.can_be_picked}")
 
         # Display Creatures
-        print("\n=== Creatures ===")
+        print("\n###### Creatures ##########")
         for creature in self._record.creatures:
             print(f"\nCreature: {creature.nickname}")
             print(f"Description: {creature.description}")
@@ -119,38 +128,41 @@ class Operation:
     def command_multiplexer(self, command):
         """Multiplex the command to the corresponding function."""
         try:
-            command_num = int(command)
-            if 1 <= command_num <= 15:
-                commands = {
-                    "1": self.inspect_pymon,
-                    "2": self.inspect_location,
-                    "3": self.move_pymon,
-                    "4": self.pick_item,
-                    "5": self.view_inventory,
-                    "6": self.challenge_creature,
-                    "7": self.display_battle_stats,
-                    "8": self.save_game,
-                    "9": self.load_game,
-                    "10": self.add_custom_location,
-                    "11": self.add_custom_creature,
-                    "12": self.display_setup,
-                    "13": self.view_bench_pymons,
-                    "14": self.switch_active_pymon,
-                    "15": self.exit_program,
-                }
-                commands[str(command_num)]()
+            user_command = int(command)
+            if user_command == 1:
+                self.pymon.inspect()
+            elif user_command == 2:
+                self.pymon.location.inspect()
+            elif user_command == 3:
+                self.move_pymon()
+            elif user_command == 4:
+                self.pick_item()
+            elif user_command == 5:
+                self.view_inventory()
+            elif user_command == 6:
+                self.challenge_creature()
+            elif user_command == 7:
+                self.display_battle_stats()
+            elif user_command == 8:
+                self.save_game()
+            elif user_command == 9:
+                self.load_game()
+            elif user_command == 10:
+                self.add_custom_location()
+            elif user_command == 11:
+                self.add_custom_creature()
+            elif user_command == 12:
+                self.display_setup()
+            elif user_command == 13:
+                self.view_pymons()
+            elif user_command == 14:
+                self.switch_active_pymon()
+            elif user_command == 15:
+                self.quit()
             else:
                 print("Invalid command. Please enter a number between 1 and 15.")
         except ValueError:
             print("Invalid command. Please enter a number between 1 and 15.")
-
-    def inspect_pymon(self):
-        """Inspect the Pymon's details."""
-        self.pymon.inspect()
-
-    def inspect_location(self):
-        """inspect the current locationÏ"""
-        self.pymon.location.inspect()
 
     def move_pymon(self):
         """Move Pymon to a new location."""
@@ -158,7 +170,7 @@ class Operation:
         try:
             needs_switch = self.pymon.move(direction, self._game_state)
             if needs_switch:
-                self.force_switch_pymon()
+                self.switch_pymon_compulsory()
         except InvalidDirectionException as e:
             print(e)
 
@@ -180,19 +192,16 @@ class Operation:
     def challenge_creature(self):
         """Challenge a creature in the current location."""
         creature_name = input("Challenge who?: ").lower()
-        creature = next(
-            (
-                c
-                for c in self.pymon.location.creatures
-                if c.nickname.lower() == creature_name
-            ),
-            None,
-        )
+        creature = None
+        for c in self.pymon.location.creatures:
+            if c.nickname.lower() == creature_name:
+                creature = c
+                break
         if creature:
             try:
                 if isinstance(creature, Animal):
                     raise AnimalCaptureError()
-                
+
                 captured_pymon = self.pymon.challenge(creature)
                 if captured_pymon and isinstance(captured_pymon, Pymon):
                     self._game_state.bench_pymons.append(
@@ -251,24 +260,24 @@ class Operation:
             print("Starting with current Pymon state.")
             self.generate_stats()
 
-    def exit_program(self):
+    def quit(self):
         """Exit the program."""
         print("Exiting the program.")
         sys.exit(0)
 
-    def force_switch_pymon(self):
+    def switch_pymon_compulsory(self):
         """Force switch to a Pymon with energy when current Pymon runs out of energy."""
         while True:
-            index = self.get_pymon_choice()
+            index = self.get_user_pymon()
             if index is not None:
                 selected_pymon = self._game_state.bench_pymons[index]
-                if self.pymon_has_energy(selected_pymon):
-                    self.switch_to_pymon(index, selected_pymon)
+                if self.check_energy(selected_pymon):
+                    self.switch_pymon(index, selected_pymon)
                     return
                 else:
                     print("That Pymon has no energy! Choose another one.")
 
-    def get_pymon_choice(self):
+    def get_user_pymon(self):
         """Prompt user to select a Pymon and return the corresponding index."""
         choice = input("Enter the number of the Pymon you want to switch to: ")
         try:
@@ -281,39 +290,39 @@ class Operation:
             print("Invalid input. Please enter a number.")
         return None
 
-    def pymon_has_energy(self, pymon):
+    def check_energy(self, pymon):
         """Check if the selected Pymon has energy."""
         return "stats" in pymon and pymon["stats"].get("energy", 0) > 0
 
-    def switch_to_pymon(self, index, selected_pymon):
+    def switch_pymon(self, index, selected_pymon):
         """Switch to the selected Pymon, update stats and inventory."""
-        current_pymon_data = self.save_current_pymon_data()
+        current_pymon_data = self.save_current_pymon()
 
         new_pymon = self.create_new_pymon(selected_pymon)
 
         # Set up new Pymon's stats and inventory
-        self.set_pymon_stats(new_pymon, selected_pymon)
-        self.set_pymon_inventory(new_pymon, selected_pymon)
+        self.set_stats(new_pymon, selected_pymon)
+        self.set_inventory(new_pymon, selected_pymon)
 
         # Update the bench with the current Pymon data
-        self._game_state.bench_pymons[index] = current_pymon_data
+        self.game_state.bench_pymons[index] = current_pymon_data
 
         # Switch active Pymon
-        self._pymon = new_pymon
+        self.pymon = new_pymon
         print(f"\nSwitched to {new_pymon.nickname}!")
         print(f"Energy: {new_pymon.energy}/{MAX_ENERGY}")
 
-    def save_current_pymon_data(self):
+    def save_current_pymon(self):
         """Save the current Pymon's data to the bench."""
         return {
-            "nickname": self._pymon.nickname,
-            "description": self._pymon.description,
-            "inventory": [item.name for item in self._pymon.inventory],
+            "nickname": self.pymon.nickname,
+            "description": self.pymon.description,
+            "inventory": [item.name for item in self.pymon.inventory],
             "stats": {
-                "energy": self._pymon.energy,
-                "has_immunity": self._pymon.has_immunity,
-                "move_count": self._pymon.move_count,
-                "battle_stats": self._pymon.battle_stats,
+                "energy": self.pymon.energy,
+                "has_immunity": self.pymon.has_immunity,
+                "move_count": self.pymon.move_count,
+                "battle_stats": self.pymon.battle_stats,
             },
         }
 
@@ -322,10 +331,10 @@ class Operation:
         return Pymon(
             selected_pymon["nickname"],
             selected_pymon["description"],
-            self._pymon.location,
+            self.pymon.location,
         )
 
-    def set_pymon_stats(self, new_pymon, selected_pymon):
+    def set_stats(self, new_pymon, selected_pymon):
         """Set the stats for the new Pymon."""
         if "stats" in selected_pymon:
             new_pymon.energy = selected_pymon["stats"].get("energy", 3)
@@ -333,11 +342,11 @@ class Operation:
             new_pymon.move_count = selected_pymon["stats"].get("move_count", 0)
             new_pymon.battle_stats = selected_pymon["stats"].get("battle_stats", [])
 
-    def set_pymon_inventory(self, new_pymon, selected_pymon):
+    def set_inventory(self, new_pymon, selected_pymon):
         """Set the inventory for the new Pymon."""
         if selected_pymon.get("inventory"):
             for item_name in selected_pymon["inventory"]:
-                for location in self._record.locations:
+                for location in self.record.locations:
                     item = next(
                         (i for i in location.items if i.name == item_name), None
                     )
@@ -346,14 +355,14 @@ class Operation:
                         location.items.remove(item)
                         break
 
-    def view_bench_pymons(self):
+    def view_pymons(self):
         """Display all Pymons on the bench."""
-        if not self._game_state.bench_pymons:
+        if not self.game_state.bench_pymons:
             print("Your bench is empty. Capture some Pymons in battle!")
             return
 
         print("\n=== Your Bench Pymons ===")
-        for i, pymon in enumerate(self._game_state.bench_pymons, 1):
+        for i, pymon in enumerate(self.game_state.bench_pymons, 1):
             print(f"\n{i}) {pymon['nickname']}")
             print(f"   Description: {pymon['description']}")
             if "stats" in pymon:
@@ -363,22 +372,22 @@ class Operation:
 
     def switch_active_pymon(self):
         """Switch the currently active Pymon with one from the bench."""
-        if not self._game_state.bench_pymons:
+        if not self.game_state.bench_pymons:
             print("Your bench is empty. Capture some Pymons in battle!")
             return
 
-        self.view_bench_pymons()
+        self.view_pymons()
         choice = self.get_pymon_switch_choice()
         if choice is not None:
-            selected_pymon = self._game_state.bench_pymons[choice]
-            current_pymon_data = self.save_current_pymon_data()
+            selected_pymon = self.game_state.bench_pymons[choice]
+            current_pymon_data = self.save_current_pymon()
             new_pymon = self.create_new_pymon(selected_pymon)
 
-            self.set_pymon_stats(new_pymon, selected_pymon)
-            self.set_pymon_inventory(new_pymon, selected_pymon)
+            self.set_stats(new_pymon, selected_pymon)
+            self.set_inventory(new_pymon, selected_pymon)
             self.update_bench(choice, current_pymon_data)
 
-            self._pymon = new_pymon
+            self.pymon = new_pymon
             self.display_switch_success(new_pymon)
 
     def get_pymon_switch_choice(self):
@@ -391,7 +400,7 @@ class Operation:
 
         try:
             index = int(choice) - 1
-            if 0 <= index < len(self._game_state.bench_pymons):
+            if 0 <= index < len(self.game_state.bench_pymons):
                 return index
             else:
                 print("Invalid Pymon number.")
@@ -401,7 +410,7 @@ class Operation:
 
     def update_bench(self, index, current_pymon_data):
         """Update the bench with the current Pymon's data."""
-        self._game_state.bench_pymons[index] = current_pymon_data
+        self.game_state.bench_pymons[index] = current_pymon_data
 
     def display_switch_success(self, new_pymon):
         """Display success message after switching to a new Pymon."""
@@ -455,9 +464,9 @@ class Operation:
             else:
                 doors[direction] = "None"
 
-        location = Location(name, description)
-        location.doors = doors
-        self.record.locations.append(location)
+        loc = Location(name, description)
+        loc.doors = doors
+        self.record.locations.append(loc)
 
         with open("locations.csv", "r") as file:
             lines = file.readlines()

@@ -170,7 +170,7 @@ class GameState:
                     if section == "items":
                         self.load_item(line)
                     elif section == "locations":
-                        self.load_location(line)
+                        self.load_loc(line)
                     elif section == "creatures":
                         self.load_creature(line)
                     elif section == "user_pymon":
@@ -178,7 +178,7 @@ class GameState:
                         if len(user_pymon_lines) >= 4:
                             self.load_user_pymon(user_pymon_lines, battle_stats, line)
                     elif section == "bench_pymons":
-                        self.load_bench_pymon(line)
+                        self.load_bench(line)
 
             print(f"Game loaded successfully from {file_path}")
 
@@ -207,7 +207,7 @@ class GameState:
             "can_be_picked": can_be_picked.lower() == "true",
         }
 
-    def load_location(self, line):
+    def load_loc(self, line):
         """Load a location from the save file."""
         name, desc, connections = line.split(",", 2)
         connections_dict = {}
@@ -262,7 +262,7 @@ class GameState:
                 "inventory": inventory,  # Store inventory items as strings
             }
 
-    def load_bench_pymon(self, line):
+    def load_bench(self, line):
         """Load a Pymon from the bench in the save file."""
         nickname, description, inventory = line.split(",", 2)
         inventory_items = inventory.split(",") if inventory else []

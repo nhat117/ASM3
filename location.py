@@ -11,7 +11,6 @@ class Location:
         self._creatures = []
         self._items = []
 
-    # Getter and setter for name
     @property
     def name(self):
         """Getter for name"""
@@ -21,7 +20,6 @@ class Location:
     def name(self, new_name):
         self._name = new_name
 
-    # Getter and setter for description
     @property
     def description(self):
         """Getter for Description"""
@@ -31,7 +29,6 @@ class Location:
     def description(self, new_description):
         self._description = new_description
 
-    # Getter and setter for doors
     @property
     def doors(self):
         """Getter for Doors"""
@@ -44,7 +41,6 @@ class Location:
         else:
             raise ValueError("Doors must be a dictionary")
 
-    # Getter and setter for creatures
     @property
     def creatures(self):
         """Getter for the creatures present in the location."""
@@ -57,7 +53,6 @@ class Location:
         else:
             raise ValueError("Creatures must be a list")
 
-    # Getter and setter for items
     @property
     def items(self):
         return self._items

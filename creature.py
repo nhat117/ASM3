@@ -7,6 +7,7 @@ from item import MAX_ENERGY
 
 THRESHOLD = 2  # Number of wins needed to capture a creature
 LOSS_ENERGY_RATE = -1
+WIN_THRESHOLD = 2
 
 
 class Creature:
@@ -15,7 +16,6 @@ class Creature:
         self._description = description
         self._location = location
 
-    # Getter and setter for nickname
     @property
     def nickname(self):
         return self._nickname
@@ -24,7 +24,6 @@ class Creature:
     def nickname(self, new_nickname):
         self._nickname = new_nickname
 
-    # Getter and setter for description
     @property
     def description(self):
         return self._description
@@ -33,7 +32,6 @@ class Creature:
     def description(self, new_description):
         self._description = new_description
 
-    # Getter and setter for location
     @property
     def location(self):
         return self._location
@@ -147,11 +145,11 @@ class Pymon(Creature):
             self.location = self.location.doors[direction]
             self.display_new_location()
 
-            self._move_count += 1
-            if self._move_count % 2 == 0:
+            self.move_count += 1
+            if self.move_count % 2 == 0:
                 self.decrease_energy()
 
-            if self._energy <= 0:
+            if self.energy <= 0:
                 self.handle_energy_depletion(game_state)
                 return True
         else:
@@ -220,7 +218,7 @@ class Pymon(Creature):
             player_choice = self.get_player_choice()
             if not player_choice:
                 continue
-            opponent_choice = self.get_opponent_choice()
+            opponent_choice = self.get_move_opponent()
             print(f"Your opponent issued {opponent_choice}!")
 
             result = self.resolve_battle(player_choice, opponent_choice)
@@ -228,9 +226,9 @@ class Pymon(Creature):
 
         self.handle_immunity_removal(had_immunity)
 
-        self.record_battle_stats(creature, wins, draws, losses)
+        self.generate_stats(creature, wins, draws, losses)
 
-        return self.handle_battle_outcome(creature, wins)
+        return self.handle_outcome(creature, wins)
 
     def get_player_choice(self):
         """Prompt the player to choose rock, paper, or scissors."""
@@ -240,23 +238,23 @@ class Pymon(Creature):
             return None
         return player_choice
 
-    def get_opponent_choice(self):
+    def get_move_opponent(self):
         """Get a random choice for the opponent."""
         return random.choice(["r", "p", "s"])
 
-    def update_battle_results(self, result, wins, losses):
+    def update_battle_results(self, res, wins, lose):
         """Update the win/loss counters based on the battle result."""
-        if result == "win":
+        if res == "win":
             wins += 1
             print(f"You won 1 encounter!")
-        elif result == "lose":
-            losses += 1
-            self.handle_loss()
-        return wins, losses
+        elif res == "lose":
+            lose += 1
+            self.handle_player_lose()
+        return wins, lose
 
-    def handle_loss(self):
+    def handle_player_lose(self):
         """Handle the case where the player loses an encounter."""
-        if not self._has_immunity:
+        if not self.has_immunity:
             self.energy = self.energy + LOSS_ENERGY_RATE  # Use energy setter
             print(
                 f"You lost 1 encounter and lost 1 energy. Energy: {self._energy}/{MAX_ENERGY}"
@@ -265,22 +263,22 @@ class Pymon(Creature):
             print(
                 f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/{MAX_ENERGY}"
             )
-            self._has_immunity = False  # Remove immunity after it's used
+            self.has_immunity = False  # Remove immunity after it's used
 
     def handle_immunity_removal(self, had_immunity):
         """Remove the magic potion from inventory if immunity was used."""
         if had_immunity:
-            for item in self._inventory[
-                :
-            ]:  # Create a copy to safely modify during iteration
+            for item in self.inventory[
+                        :
+                        ]:  # Create a copy to safely modify during iteration
                 if item.name.lower() == "magic potion":
-                    self._inventory.remove(item)
+                    self.inventory.remove(item)
                     break
 
-    def record_battle_stats(self, creature, wins, draws, losses):
+    def generate_stats(self, creature, wins, draws, losses):
         """Record the battle statistics with a timestamp."""
         timestamp = datetime.datetime.now().strftime("%d/%m/%Y %I:%M%p")
-        self._battle_stats.append(
+        self.battle_stats.append(
             {
                 "timestamp": timestamp,
                 "opponent": creature.nickname,
@@ -290,8 +288,8 @@ class Pymon(Creature):
             }
         )
 
-    def handle_battle_outcome(self, creature, wins):
-        if wins == 2:
+    def handle_outcome(self, creature, wins):
+        if wins == WIN_THRESHOLD:
             print(f"Congrats! You won the battle and captured {creature.nickname}!")
             self.capture_creature(creature)
             return creature
@@ -382,30 +380,30 @@ class Pymon(Creature):
         ).lower()
 
         if direction == "current":
-            self.view_current_location()
+            self.view_curr_loc()
         elif direction in ["west", "north", "east", "south"]:
-            self.view_connected_location(direction)
+            self.view_connected_loc(direction)
         else:
             print("Invalid direction for binocular use.")
 
-    def view_current_location(self):
+    def view_curr_loc(self):
         """Display information about the current location."""
-        location_desc = []
+        location_description = []
         if self.location.creatures:
             creatures = [c.nickname for c in self.location.creatures if c != self]
             if creatures:
-                location_desc.append(", ".join(creatures))
+                location_description.append(", ".join(creatures))
 
         for dir, loc in self.location.doors.items():
             if loc:
-                location_desc.append(f"in the {dir} is {loc.name}")
+                location_description.append(f"in the {dir} is {loc.name}")
 
-        if location_desc:
-            print(", ".join(location_desc))
+        if location_description:
+            print(", ".join(location_description))
         else:
             print("Nothing notable in the current location.")
 
-    def view_connected_location(self, direction):
+    def view_connected_loc(self, direction):
         """Display information about a connected location in a given direction."""
         if direction in self.location.doors and self.location.doors[direction]:
             connected_location = self.location.doors[direction]
@@ -429,6 +427,7 @@ class Pymon(Creature):
 # Animal class (inherits Creature)
 class Animal(Creature):
     """Class representing an animal in the game. An nimal cannot be pickup or used in battle."""
+
     def __init__(self, nickname, description, location=None):
         super().__init__(nickname, description, location)
 
