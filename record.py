@@ -13,6 +13,7 @@ class Record:
         self._locations = []
         self._creatures = []
         self._game_state = GameState()
+        self._current_pymon = None
 
     # Getter and setter for locations
     @property
@@ -38,9 +39,25 @@ class Record:
         else:
             raise ValueError("Creatures must be a list.")
 
-    def save_game_state(self, file_path='save2024.csv'):
+    def save_game_state(self, file_path='save2024.csv', current_pymon=None):
         """Save the current game state."""
         try:
+            # Store current Pymon
+            if current_pymon:
+                self._current_pymon = current_pymon
+                self._game_state.user_pymon = {
+                    'nickname': current_pymon.nickname,
+                    'description': current_pymon.description,
+                    'location': current_pymon.location.name if current_pymon.location else 'None',
+                    'stats': {
+                        'energy': current_pymon.energy,
+                        'has_immunity': current_pymon.has_immunity,
+                        'move_count': current_pymon.move_count,
+                        'battle_stats': current_pymon.battle_stats
+                    },
+                    'inventory': [item.name for item in current_pymon.inventory]
+                }
+
             # Update game state with current data
             for location in self._locations:
                 self._game_state.locations[location.name] = {
@@ -98,9 +115,52 @@ class Record:
                 
                 self._creatures.append(creature)
 
+            # Reconstruct current Pymon if exists
+            user_data = self._game_state.user_pymon
+            if user_data and isinstance(user_data, dict):
+                current_pymon = Pymon(user_data['nickname'], user_data['description'])
+                
+                # Set location
+                if user_data['location'] != 'None' and user_data['location'] in location_dict:
+                    current_pymon.location = location_dict[user_data['location']]
+                
+                # Set stats
+                if 'stats' in user_data:
+                    stats = user_data['stats']
+                    current_pymon.energy = stats.get('energy', 3)
+                    current_pymon.has_immunity = stats.get('has_immunity', False)
+                    current_pymon.move_count = stats.get('move_count', 0)
+                    current_pymon.battle_stats = stats.get('battle_stats', [])
+                
+                # Set inventory
+                if 'inventory' in user_data:
+                    for item_name in user_data['inventory']:
+                        # Find the item in locations
+                        for location in self._locations:
+                            item = next((i for i in location.items if i.name == item_name), None)
+                            if item:
+                                current_pymon.inventory.append(item)
+                                location.items.remove(item)
+                                break
+                
+                self._current_pymon = current_pymon
+
+            # Reconstruct bench Pymons
+            bench_pymons = []
+            for pymon_data in self._game_state.bench_pymons:
+                bench_pymon = {
+                    'nickname': pymon_data['nickname'],
+                    'description': pymon_data['description'],
+                    'inventory': pymon_data['inventory']
+                }
+                bench_pymons.append(bench_pymon)
+            self._game_state.bench_pymons = bench_pymons
+
             print(f"Game state loaded from {file_path}")
+            return self._current_pymon
         except Exception as e:
             print(f"Failed to load game state: {str(e)}")
+            return None
 
     def load_data(
             self,

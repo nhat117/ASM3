@@ -1,5 +1,8 @@
 # Creature class
 from exceptions import *
+import sys
+import random
+import datetime
 
 
 class Creature:
@@ -133,7 +136,8 @@ class Pymon(Creature):
         else:
             print("You have no items.")
 
-    def move(self, direction):
+    def move(self, direction, game_state=None):
+        """Move in the specified direction. Returns True if energy is depleted."""
         if direction in self.location.doors and self.location.doors[direction]:
             new_location = self.location.doors[direction]
             self.location = new_location
@@ -152,11 +156,33 @@ class Pymon(Creature):
                 )
                 if self._energy <= 0:
                     print(
-                        f"{self.nickname} is out of energy and escaped into the wild. Game over."
+                        f"{self.nickname} is out of energy and escaped into the wild!"
                     )
-                    sys.exit(0)
+                    # Check if there are available Pymons on the bench
+                    if game_state and game_state.bench_pymons:
+                        available_pymons = []
+                        print("\nAvailable Pymons on bench:")
+                        for i, pymon in enumerate(game_state.bench_pymons, 1):
+                            # Create temporary Pymon to check energy
+                            temp_pymon = Pymon(pymon['nickname'], pymon['description'])
+                            if 'stats' in pymon and 'energy' in pymon['stats']:
+                                temp_pymon.energy = pymon['stats']['energy']
+                            if temp_pymon.energy > 0:
+                                available_pymons.append((i, pymon))
+                                print(f"{i}) {pymon['nickname']} - Energy: {temp_pymon.energy}/3")
+                        
+                        if available_pymons:
+                            print("\nYou must switch to a Pymon that still has energy!")
+                            return True
+                        else:
+                            print("No Pymons with energy available. Game over.")
+                            sys.exit(0)
+                    else:
+                        print("No backup Pymons available. Game over.")
+                        sys.exit(0)
         else:
             raise InvalidDirectionException(f"There is no door to the {direction}.")
+        return False
 
     def inspect(self):
         print(f"Pymon {self.nickname}: {self.description}, Energy: {self._energy}/3")
@@ -212,10 +238,17 @@ class Pymon(Creature):
 
         if wins == 2:
             print(
-                f"Congrats! You won the battle and adopted a new Pymon called {creature.nickname}!"
+                f"Congrats! You won the battle and captured {creature.nickname}!"
             )
+            # Remove the creature from its current location
+            if creature.location and hasattr(creature.location, 'creatures'):
+                creature.location.creatures.remove(creature)
+            creature.location = None
+            # Return the captured creature for adding to bench
+            return creature
         else:
             print("You lost the battle!")
+            return None
 
     def display_battle_stats(self):
         total_wins, total_draws, total_losses = 0, 0, 0

@@ -36,6 +36,48 @@ class Operation:
     def record(self, new_record):
         self._record = new_record
 
+    def display_setup(self):
+        """
+        Display the current setup of the game world including locations, connections,
+        items, and creatures.
+        """
+        print("\n=== Game World Setup ===\n")
+        
+        # Display Locations and their connections
+        print("=== Locations ===")
+        for location in self._record.locations:
+            print(f"\nLocation: {location.name}")
+            print(f"Description: {location.description}")
+            print("Connections:")
+            if location.doors:
+                has_connections = False
+                for direction, connected_loc in location.doors.items():
+                    if connected_loc and connected_loc != "None":
+                        has_connections = True
+                        # If connected_loc is a Location object, use its name
+                        loc_name = connected_loc.name if isinstance(connected_loc, Location) else connected_loc
+                        print(f"  {direction} -> {loc_name}")
+                if not has_connections:
+                    print("  No connections")
+            else:
+                print("  No connections")
+
+        # Display Items
+        print("\n=== Items ===")
+        for location in self._record.locations:
+            for item in location.items:
+                print(f"\nItem: {item.name}")
+                print(f"Location: {location.name}")
+                print(f"Can be picked: {item.can_be_picked}")
+
+        # Display Creatures
+        print("\n=== Creatures ===")
+        for creature in self._record.creatures:
+            print(f"\nCreature: {creature.nickname}")
+            print(f"Description: {creature.description}")
+            print(f"Location: {creature.location.name if creature.location else 'Unknown'}")
+            print(f"Is Pymon: {isinstance(creature, Pymon)}")
+
     def display_menu(self):
         print("\nPlease issue a command to your Pymon:")
         print("1) Inspect Pymon")
@@ -49,7 +91,10 @@ class Operation:
         print("9) Load game")
         print("10) Add custom location")
         print("11) Add custom creature")
-        print("12) Exit the program")
+        print("12) Display setup")
+        print("13) View bench Pymons")
+        print("14) Switch active Pymon")
+        print("15) Exit the program")
 
     def command_multiplexer(self, command):
         if command == "1":
@@ -59,7 +104,11 @@ class Operation:
         elif command == "3":
             direction = input("Moving to which direction?: ").lower()
             try:
-                self.pymon.move(direction)
+                # Pass game_state to move method
+                needs_switch = self.pymon.move(direction, self._game_state)
+                if needs_switch:
+                    # Force switch to a Pymon with energy
+                    self.force_switch_pymon()
             except InvalidDirectionException as e:
                 print(e)
         elif command == "4":
@@ -85,7 +134,21 @@ class Operation:
                 None,
             )
             if creature:
-                self.pymon.challenge(creature)
+                captured_pymon = self.pymon.challenge(creature)
+                if captured_pymon and isinstance(captured_pymon, Pymon):
+                    # Add captured Pymon to bench with default energy
+                    self._game_state.bench_pymons.append({
+                        'nickname': captured_pymon.nickname,
+                        'description': captured_pymon.description,
+                        'inventory': [],  # Start with empty inventory
+                        'stats': {
+                            'energy': 3,  # Start with full energy
+                            'has_immunity': False,
+                            'move_count': 0,
+                            'battle_stats': []
+                        }
+                    })
+                    print(f"{captured_pymon.nickname} has been added to your bench!")
             else:
                 print(f"There is no creature named {creature_name} here.")
         elif command == "7":
@@ -96,21 +159,8 @@ class Operation:
             if not save_file:
                 save_file = 'save2024.csv'
             
-            # Update user pymon state before saving
-            self._game_state.user_pymon = {
-                'nickname': self._pymon.nickname,
-                'description': self._pymon.description,
-                'location': self._pymon.location.name if self._pymon.location else 'None',
-                'stats': {
-                    'energy': self._pymon.energy,
-                    'has_immunity': self._pymon.has_immunity,
-                    'move_count': self._pymon.move_count,
-                    'battle_stats': self._pymon.battle_stats
-                },
-                'inventory': [item.name for item in self._pymon.inventory]
-            }
-            
-            self._record.save_game_state(save_file)
+            # Save game state with current Pymon
+            self._record.save_game_state(save_file, self._pymon)
             print(f"Game progress saved to {save_file}")
             
         elif command == "9":
@@ -120,50 +170,14 @@ class Operation:
                 save_file = 'save2024.csv'
             
             try:
-                self._record.load_game_state(save_file)
-                
-                # Restore user pymon state
-                user_data = self._game_state.user_pymon
-                if user_data and isinstance(user_data, dict):
-                    # Update pymon attributes if they exist in saved data
-                    if 'nickname' in user_data and user_data['nickname']:
-                        self._pymon.nickname = user_data['nickname']
-                    if 'description' in user_data and user_data['description']:
-                        self._pymon.description = user_data['description']
-                    
-                    # Find and set location
-                    if 'location' in user_data and user_data['location'] != 'None':
-                        for location in self._record.locations:
-                            if location.name == user_data['location']:
-                                self._pymon.location = location
-                                break
-                    
-                    # Restore stats if they exist
-                    if 'stats' in user_data and isinstance(user_data['stats'], dict):
-                        stats = user_data['stats']
-                        if 'energy' in stats:
-                            self._pymon.energy = stats['energy']
-                        if 'has_immunity' in stats:
-                            self._pymon.has_immunity = stats['has_immunity']
-                        if 'move_count' in stats:
-                            self._pymon.move_count = stats['move_count']
-                        if 'battle_stats' in stats:
-                            self._pymon.battle_stats = stats['battle_stats']
-                    
-                    # Restore inventory if it exists
-                    if 'inventory' in user_data:
-                        self._pymon.inventory = []
-                        for item_name in user_data['inventory']:
-                            # Find the item in locations and add to inventory
-                            for location in self._record.locations:
-                                item = next((i for i in location.items if i.name == item_name), None)
-                                if item:
-                                    self._pymon.inventory.append(item)
-                                    location.items.remove(item)
-                                    break
-                    
+                # Load game state and get reconstructed Pymon
+                loaded_pymon = self._record.load_game_state(save_file)
+                if loaded_pymon:
+                    self._pymon = loaded_pymon
+                    # Get bench Pymons from game state
+                    self._game_state = self._record._game_state
                     print(f"Game progress loaded from {save_file}")
-                    self.generate_stats()  # Show current state after loading
+                    self.generate_stats()
                 else:
                     print("No valid saved game data found. Starting with current Pymon state.")
                     self.generate_stats()
@@ -177,10 +191,164 @@ class Operation:
         elif command == "11":
             self.add_custom_creature()
         elif command == "12":
+            self.display_setup()
+        elif command == "13":
+            self.view_bench_pymons()
+        elif command == "14":
+            self.switch_active_pymon()
+        elif command == "15":
             print("Exiting the program.")
             sys.exit(0)
         else:
             print("Invalid command, please try again.")
+
+    def force_switch_pymon(self):
+        """Force switch to a Pymon with energy when current Pymon runs out of energy."""
+        while True:
+            choice = input("Enter the number of the Pymon you want to switch to: ")
+            try:
+                index = int(choice) - 1
+                if 0 <= index < len(self._game_state.bench_pymons):
+                    selected_pymon = self._game_state.bench_pymons[index]
+                    # Check if selected Pymon has energy
+                    if 'stats' in selected_pymon and selected_pymon['stats'].get('energy', 0) > 0:
+                        # Store current Pymon's data in bench
+                        current_pymon_data = {
+                            'nickname': self._pymon.nickname,
+                            'description': self._pymon.description,
+                            'inventory': [item.name for item in self._pymon.inventory],
+                            'stats': {
+                                'energy': self._pymon.energy,
+                                'has_immunity': self._pymon.has_immunity,
+                                'move_count': self._pymon.move_count,
+                                'battle_stats': self._pymon.battle_stats
+                            }
+                        }
+                        
+                        # Create new Pymon instance
+                        new_pymon = Pymon(
+                            selected_pymon['nickname'],
+                            selected_pymon['description'],
+                            self._pymon.location
+                        )
+                        
+                        # Set up new Pymon's stats and inventory
+                        if 'stats' in selected_pymon:
+                            new_pymon.energy = selected_pymon['stats'].get('energy', 3)
+                            new_pymon.has_immunity = selected_pymon['stats'].get('has_immunity', False)
+                            new_pymon.move_count = selected_pymon['stats'].get('move_count', 0)
+                            new_pymon.battle_stats = selected_pymon['stats'].get('battle_stats', [])
+                        
+                        if selected_pymon.get('inventory'):
+                            for item_name in selected_pymon['inventory']:
+                                for location in self._record.locations:
+                                    item = next((i for i in location.items if i.name == item_name), None)
+                                    if item:
+                                        new_pymon.inventory.append(item)
+                                        location.items.remove(item)
+                                        break
+                        
+                        # Update bench with current Pymon's data
+                        self._game_state.bench_pymons[index] = current_pymon_data
+                        
+                        # Switch active Pymon
+                        self._pymon = new_pymon
+                        print(f"\nSwitched to {new_pymon.nickname}!")
+                        print(f"Energy: {new_pymon.energy}/3")
+                        return
+                    else:
+                        print("That Pymon has no energy! Choose another one.")
+                else:
+                    print("Invalid Pymon number.")
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+
+    def view_bench_pymons(self):
+        """Display all Pymons on the bench."""
+        if not self._game_state.bench_pymons:
+            print("Your bench is empty. Capture some Pymons in battle!")
+            return
+            
+        print("\n=== Your Bench Pymons ===")
+        for i, pymon in enumerate(self._game_state.bench_pymons, 1):
+            print(f"\n{i}) {pymon['nickname']}")
+            print(f"   Description: {pymon['description']}")
+            if 'stats' in pymon:
+                print(f"   Energy: {pymon['stats'].get('energy', 3)}/3")
+            if pymon.get('inventory'):
+                print(f"   Inventory: {', '.join(pymon['inventory'])}")
+
+    def switch_active_pymon(self):
+        """Switch the currently active Pymon with one from the bench."""
+        if not self._game_state.bench_pymons:
+            print("Your bench is empty. Capture some Pymons in battle!")
+            return
+            
+        self.view_bench_pymons()
+        choice = input("\nEnter the number of the Pymon you want to switch to (or press Enter to cancel): ")
+        
+        if not choice:
+            return
+            
+        try:
+            index = int(choice) - 1
+            if 0 <= index < len(self._game_state.bench_pymons):
+                # Get selected Pymon from bench
+                selected_pymon = self._game_state.bench_pymons[index]
+                
+                # Store current Pymon's data in bench
+                current_pymon_data = {
+                    'nickname': self._pymon.nickname,
+                    'description': self._pymon.description,
+                    'inventory': [item.name for item in self._pymon.inventory],
+                    'stats': {
+                        'energy': self._pymon.energy,
+                        'has_immunity': self._pymon.has_immunity,
+                        'move_count': self._pymon.move_count,
+                        'battle_stats': self._pymon.battle_stats
+                    }
+                }
+                
+                # Create new Pymon instance
+                new_pymon = Pymon(
+                    selected_pymon['nickname'],
+                    selected_pymon['description'],
+                    self._pymon.location
+                )
+                
+                # Set up new Pymon's stats and inventory
+                if 'stats' in selected_pymon:
+                    new_pymon.energy = selected_pymon['stats'].get('energy', 3)
+                    new_pymon.has_immunity = selected_pymon['stats'].get('has_immunity', False)
+                    new_pymon.move_count = selected_pymon['stats'].get('move_count', 0)
+                    new_pymon.battle_stats = selected_pymon['stats'].get('battle_stats', [])
+                
+                if selected_pymon.get('inventory'):
+                    for item_name in selected_pymon['inventory']:
+                        for location in self._record.locations:
+                            item = next((i for i in location.items if i.name == item_name), None)
+                            if item:
+                                new_pymon.inventory.append(item)
+                                location.items.remove(item)
+                                break
+                
+                # Update bench with current Pymon's data
+                self._game_state.bench_pymons[index] = current_pymon_data
+                
+                # Switch active Pymon
+                self._pymon = new_pymon
+                print(f"\nSwitched to {new_pymon.nickname}!")
+                
+                # Show current stats
+                print(f"Energy: {new_pymon.energy}/3")
+                if new_pymon.inventory:
+                    print(f"Current inventory: {', '.join(item.name for item in new_pymon.inventory)}")
+                else:
+                    print("Current inventory is empty.")
+            else:
+                print("Invalid Pymon number.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
 
     def menu(self):
         while True:

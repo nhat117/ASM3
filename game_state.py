@@ -13,8 +13,46 @@ class GameState:
             'stats': {},
             'inventory': []
         }
+        self.bench_pymons = []  # List to store captured Pymons
         self.locations = {}  # Dictionary to store location states
         self.creatures = {}  # Dictionary to store creature states
+
+    def display_setup(self):
+        """
+        Display the current setup of the game world including locations, connections,
+        items, and creatures. This is for testing purposes only.
+        """
+        print("\n=== Game World Setup ===\n")
+        
+        # Display Locations and their connections
+        print("=== Locations ===")
+        for loc_name, data in self.locations.items():
+            print(f"\nLocation: {loc_name}")
+            print(f"Description: {data.get('description', '')}")
+            print("Connections:")
+            connections = data.get('connections', {})
+            if connections:
+                for direction, connected_loc in connections.items():
+                    print(f"  {direction} -> {connected_loc}")
+            else:
+                print("  No connections")
+
+        # Display Items and their locations
+        print("\n=== Items ===")
+        for item_name, data in self.items.items():
+            location = data.get('location', 'Unknown')
+            can_be_picked = data.get('can_be_picked', True)
+            print(f"\nItem: {item_name}")
+            print(f"Location: {location}")
+            print(f"Can be picked: {can_be_picked}")
+
+        # Display Creatures and their locations
+        print("\n=== Creatures ===")
+        for creature_name, data in self.creatures.items():
+            print(f"\nCreature: {creature_name}")
+            print(f"Description: {data.get('description', '')}")
+            print(f"Location: {data.get('location', 'Unknown')}")
+            print(f"Is Pymon: {data.get('is_pymon', False)}")
 
     def save_game(self, file_path='save2024.csv'):
         """
@@ -32,6 +70,8 @@ class GameState:
         energy,has_immunity,move_count
         inventory_items
         battle_stats
+        [BenchPymons]
+        nickname,description,inventory_items
         """
         try:
             with open(file_path, 'w') as file:
@@ -74,6 +114,12 @@ class GameState:
                     stat_str = f"{stat['timestamp']},{stat['opponent']},{stat['wins']},{stat['draws']},{stat['losses']}"
                     file.write(stat_str + '\n')
 
+                # Save bench pymons
+                file.write("[BenchPymons]\n")
+                for pymon in self.bench_pymons:
+                    inventory_str = ','.join(item.name for item in pymon.get('inventory', []))
+                    file.write(f"{pymon['nickname']},{pymon['description']},{inventory_str}\n")
+
             print(f"Game saved successfully to {file_path}")
             
         except Exception as e:
@@ -92,6 +138,7 @@ class GameState:
                 self.items = {}
                 self.locations = {}
                 self.creatures = {}
+                self.bench_pymons = []
                 battle_stats = []
                 
                 for line in file:
@@ -108,6 +155,8 @@ class GameState:
                     elif line == "[UserPymon]":
                         section = "user_pymon"
                         user_pymon_lines = []
+                    elif line == "[BenchPymons]":
+                        section = "bench_pymons"
                     else:
                         if section == "items":
                             name, location, can_be_picked = line.split(",")
@@ -164,6 +213,14 @@ class GameState:
                                         },
                                         'inventory': inventory
                                     }
+                        elif section == "bench_pymons":
+                            nickname, description, inventory = line.split(",", 2)
+                            inventory_items = inventory.split(",") if inventory else []
+                            self.bench_pymons.append({
+                                'nickname': nickname,
+                                'description': description,
+                                'inventory': inventory_items
+                            })
 
             print(f"Game loaded successfully from {file_path}")
             

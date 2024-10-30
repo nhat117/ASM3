@@ -1,0 +1,20 @@
+[Items]
+apple,School,True
+potion,Beach,True
+tree,School,False
+binocular,Beach,True
+[Locations]
+Playground,an outdoor playground with slide and swing clearly visible.,west=School;north=Beach
+Beach,a wide open white sanded beach with a brown hill on the side.,south=Playground
+School,a secondary school for local creatures with 3 two-story buildings.,east=Playground
+[Creatures]
+Kitimon,large blue and white Pymon wtith yellow fangs,Playground,True
+Sheep,small fluffy animal with interesting curly white fur,Beach,False
+Marimon,medium red and yellow Pymon with a cute round face,None,True
+john,wqte,Playground,False
+[UserPymon]
+,
+None
+3,False,0
+
+[BenchPymons]
