@@ -5,7 +5,7 @@ import random
 import sys
 
 
-class PymonGameLoader:
+class GameLoader:
     _instance = None
 
     def __new__(cls, *args, **kwargs):

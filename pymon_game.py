@@ -1,13 +1,12 @@
-from game_loader import PymonGameLoader
+from game_loader import GameLoader
 import sys
 
 
 # Main execution
 def main():
-    # Get the singleton instance of PymonGame
-    game = PymonGameLoader()
+    game = GameLoader()
     game.start_game(sys.argv)
 
-
+## Main Programm Start Here
 if __name__ == "__main__":
     main()

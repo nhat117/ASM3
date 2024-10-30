@@ -392,6 +392,7 @@ class Operation:
             self.display_menu()
             command = input("Enter your command: ")
             self.command_multiplexer(command)
+            input("Press enter to continue")
 
     def generate_stats(self):
         """Generate and display stats."""
