@@ -5,12 +5,14 @@ from creature import Pymon, Animal
 from exceptions import InvalidInputFileFormat
 from item import Item
 from location import Location
+from game_state import GameState
 
 
 class Record:
     def __init__(self):
         self._locations = []
         self._creatures = []
+        self._game_state = GameState()
 
     # Getter and setter for locations
     @property
@@ -35,6 +37,70 @@ class Record:
             self._creatures = new_creatures
         else:
             raise ValueError("Creatures must be a list.")
+
+    def save_game_state(self, file_path='save2024.csv'):
+        """Save the current game state."""
+        try:
+            # Update game state with current data
+            for location in self._locations:
+                self._game_state.locations[location.name] = {
+                    'description': location.description,
+                    'connections': {dir: loc.name for dir, loc in location.doors.items() if loc}
+                }
+
+            for creature in self._creatures:
+                self._game_state.creatures[creature.nickname] = {
+                    'description': creature.description,
+                    'location': creature.location.name if creature.location else 'None',
+                    'is_pymon': isinstance(creature, Pymon)
+                }
+
+            # Save the game state
+            self._game_state.save_game(file_path)
+            print(f"Game state saved to {file_path}")
+        except Exception as e:
+            print(f"Failed to save game state: {str(e)}")
+
+    def load_game_state(self, file_path='save2024.csv'):
+        """Load a saved game state."""
+        try:
+            # Load the game state
+            self._game_state.load_game(file_path)
+
+            # Reconstruct locations
+            self._locations = []
+            location_dict = {}
+            
+            # First pass: Create location objects
+            for name, data in self._game_state.locations.items():
+                location = Location(name, data['description'])
+                self._locations.append(location)
+                location_dict[name] = location
+
+            # Second pass: Connect locations
+            for name, data in self._game_state.locations.items():
+                location = location_dict[name]
+                for dir, connected_name in data['connections'].items():
+                    if connected_name in location_dict:
+                        location.doors[dir] = location_dict[connected_name]
+
+            # Reconstruct creatures
+            self._creatures = []
+            for name, data in self._game_state.creatures.items():
+                if data['is_pymon']:
+                    creature = Pymon(name, data['description'])
+                else:
+                    creature = Animal(name, data['description'])
+                
+                if data['location'] != 'None' and data['location'] in location_dict:
+                    creature.location = location_dict[data['location']]
+                    creature.location.add_creature(creature)
+                
+                self._creatures.append(creature)
+
+            print(f"Game state loaded from {file_path}")
+        except Exception as e:
+            print(f"Failed to load game state: {str(e)}")
 
     def load_data(
             self,
@@ -85,6 +151,7 @@ class Record:
             return locations
         except Exception as e:
             raise InvalidInputFileFormat(f"Error loading locations: {e}")
+
     def _load_creatures(self, filename):
         try:
             creatures = []
@@ -117,6 +184,7 @@ class Record:
             return creatures
         except Exception as e:
             raise InvalidInputFileFormat(f"Error loading creatures: {e}")
+
     def _load_items(self, filename):
         try:
             with open(filename, "r") as file:
@@ -126,9 +194,15 @@ class Record:
                         continue
                     parts = line.split(",")
                     name, description = parts
-                    item = Item(name.strip(), description.strip())
-                    random.choice(self._locations).add_item(item)
-
+                    can_be_picked = name.strip().lower() != "tree"  # Trees cannot be picked up
+                    item = Item(name.strip(), description.strip(), can_be_picked)
+                    location = random.choice(self._locations)
+                    location.add_item(item)
+                    # Update game state
+                    self._game_state.items[item.name] = {
+                        'location': location.name,
+                        'can_be_picked': can_be_picked
+                    }
 
         except Exception as e:
             raise InvalidInputFileFormat(f"Error loading items: {e}")

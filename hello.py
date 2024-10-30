@@ -91,57 +91,89 @@ class Operation:
         elif command == "7":
             self.pymon.display_battle_stats()
         elif command == "8":
-            # Use GameState to save the game
-            self._game_state.items = {
-                item.name: location.name
-                for location in self._record.locations
-                for item in location.items
-            }
-
-            self._game_state.pymons = {
-                pymon.nickname: {
-                    "location": pymon.location,
-                    "stats": pymon.battle_stats if isinstance(pymon, Pymon) else None,
-                }
-                for pymon in self._record.creatures
-            }
-
+            # Save game using Record's save_game_state method
+            save_file = input("Enter save file name (default: save2024.csv): ").strip()
+            if not save_file:
+                save_file = 'save2024.csv'
+            
+            # Update user pymon state before saving
             self._game_state.user_pymon = {
-                "location": self._pymon.location,
-                "stats": self._pymon.battle_stats,
-                "inventory": [item.name for item in self._pymon.inventory],
+                'nickname': self._pymon.nickname,
+                'description': self._pymon.description,
+                'location': self._pymon.location.name if self._pymon.location else 'None',
+                'stats': {
+                    'energy': self._pymon.energy,
+                    'has_immunity': self._pymon.has_immunity,
+                    'move_count': self._pymon.move_count,
+                    'battle_stats': self._pymon.battle_stats
+                },
+                'inventory': [item.name for item in self._pymon.inventory]
             }
-
-        elif command == "8":  # Use GameState to save the game
-            self._game_state.items = {
-                item.name: location.name
-                for location in self._record.locations
-                for item in location.items
-            }
-
-            self._game_state.pymons = {
-                pymon.nickname: {
-                    "location": pymon.location.name,
-                    "stats": pymon.battle_stats if isinstance(pymon, Pymon) else None,
-                }
-                for pymon in self._record.creatures
-            }
-            self._game_state.user_pymon = {
-                "location": self._pymon.location.name,
-                "stats": self._pymon.battle_stats,
-                "inventory": [item.name for item in self._pymon.inventory],
-            }
-
-            self._game_state.save_game()
-            print("Game progress saved.")
+            
+            self._record.save_game_state(save_file)
+            print(f"Game progress saved to {save_file}")
+            
         elif command == "9":
-            # Use GameState to load the game
-            self._game_state.load_game()
-            print("Game progress loaded.")
+            # Load game using Record's load_game_state method
+            save_file = input("Enter save file name to load (default: save2024.csv): ").strip()
+            if not save_file:
+                save_file = 'save2024.csv'
+            
+            try:
+                self._record.load_game_state(save_file)
+                
+                # Restore user pymon state
+                user_data = self._game_state.user_pymon
+                if user_data and isinstance(user_data, dict):
+                    # Update pymon attributes if they exist in saved data
+                    if 'nickname' in user_data and user_data['nickname']:
+                        self._pymon.nickname = user_data['nickname']
+                    if 'description' in user_data and user_data['description']:
+                        self._pymon.description = user_data['description']
+                    
+                    # Find and set location
+                    if 'location' in user_data and user_data['location'] != 'None':
+                        for location in self._record.locations:
+                            if location.name == user_data['location']:
+                                self._pymon.location = location
+                                break
+                    
+                    # Restore stats if they exist
+                    if 'stats' in user_data and isinstance(user_data['stats'], dict):
+                        stats = user_data['stats']
+                        if 'energy' in stats:
+                            self._pymon.energy = stats['energy']
+                        if 'has_immunity' in stats:
+                            self._pymon.has_immunity = stats['has_immunity']
+                        if 'move_count' in stats:
+                            self._pymon.move_count = stats['move_count']
+                        if 'battle_stats' in stats:
+                            self._pymon.battle_stats = stats['battle_stats']
+                    
+                    # Restore inventory if it exists
+                    if 'inventory' in user_data:
+                        self._pymon.inventory = []
+                        for item_name in user_data['inventory']:
+                            # Find the item in locations and add to inventory
+                            for location in self._record.locations:
+                                item = next((i for i in location.items if i.name == item_name), None)
+                                if item:
+                                    self._pymon.inventory.append(item)
+                                    location.items.remove(item)
+                                    break
+                    
+                    print(f"Game progress loaded from {save_file}")
+                    self.generate_stats()  # Show current state after loading
+                else:
+                    print("No valid saved game data found. Starting with current Pymon state.")
+                    self.generate_stats()
+            except Exception as e:
+                print(f"Error loading game: {str(e)}")
+                print("Starting with current Pymon state.")
+                self.generate_stats()
 
         elif command == "10":
             self.add_custom_location()
-
         elif command == "11":
             self.add_custom_creature()
         elif command == "12":
@@ -158,10 +190,16 @@ class Operation:
 
     def generate_stats(self):
         """Generate and display stats."""
-        print(f"Pymon {self.pymon.nickname} Stats:")
+        print(f"\nPymon {self.pymon.nickname} Stats:")
+        print(f"Description: {self.pymon.description}")
         print(f"Energy: {self.pymon.energy}/3")
-        print(f"Inventory: {', '.join([item.name for item in self._pymon.inventory])}")
-        print(f"Location: {self.pymon.location.name}")
+        print(f"Inventory: {', '.join([item.name for item in self.pymon.inventory])}")
+        print(f"Location: {self.pymon.location.name if self.pymon.location else 'None'}")
+        print(f"Has Immunity: {'Yes' if self.pymon.has_immunity else 'No'}")
+        print(f"Move Count: {self.pymon.move_count}")
+        if self.pymon.battle_stats:
+            print("\nBattle History:")
+            self.pymon.display_battle_stats()
 
     def add_custom_location(self):
         name = input("Enter location name: ")
