@@ -4,7 +4,8 @@ import sys
 from game_state import GameState
 from location import Location
 from creature import Pymon, Animal
-from exceptions import InvalidDirectionException
+from exceptions import InvalidDirectionException, AnimalCaptureError
+from item import MAX_ENERGY
 
 
 # Operation class
@@ -28,6 +29,7 @@ class Operation:
     # Getter and setter for pymon
     @property
     def pymon(self):
+        """Getter for the Pymon."""
         return self._pymon
 
     @pymon.setter
@@ -37,6 +39,7 @@ class Operation:
     # Getter and setter for record
     @property
     def record(self):
+        """Getter for the game record."""
         return self._record
 
     @record.setter
@@ -92,6 +95,10 @@ class Operation:
             print(f"Is Pymon: {isinstance(creature, Pymon)}")
 
     def display_menu(self):
+        """Display the menu options for the game."""
+        print("##########################################")
+        print("############## Pymon Game ################")
+        print("##########################################")
         print("\nPlease issue a command to your Pymon:")
         print("1) Inspect Pymon")
         print("2) Inspect current location")
@@ -110,36 +117,43 @@ class Operation:
         print("15) Exit the program")
 
     def command_multiplexer(self, command):
-        commands = {
-            "1": self.inspect_pymon,
-            "2": self.inspect_location,
-            "3": self.move_pymon,
-            "4": self.pick_item,
-            "5": self.view_inventory,
-            "6": self.challenge_creature,
-            "7": self.display_battle_stats,
-            "8": self.save_game,
-            "9": self.load_game,
-            "10": self.add_custom_location,
-            "11": self.add_custom_creature,
-            "12": self.display_setup,
-            "13": self.view_bench_pymons,
-            "14": self.switch_active_pymon,
-            "15": self.exit_program,
-        }
-
-        if command in commands:
-            commands[command]()
-        else:
-            print("Invalid command, please try again.")
+        """Multiplex the command to the corresponding function."""
+        try:
+            command_num = int(command)
+            if 1 <= command_num <= 15:
+                commands = {
+                    "1": self.inspect_pymon,
+                    "2": self.inspect_location,
+                    "3": self.move_pymon,
+                    "4": self.pick_item,
+                    "5": self.view_inventory,
+                    "6": self.challenge_creature,
+                    "7": self.display_battle_stats,
+                    "8": self.save_game,
+                    "9": self.load_game,
+                    "10": self.add_custom_location,
+                    "11": self.add_custom_creature,
+                    "12": self.display_setup,
+                    "13": self.view_bench_pymons,
+                    "14": self.switch_active_pymon,
+                    "15": self.exit_program,
+                }
+                commands[str(command_num)]()
+            else:
+                print("Invalid command. Please enter a number between 1 and 15.")
+        except ValueError:
+            print("Invalid command. Please enter a number between 1 and 15.")
 
     def inspect_pymon(self):
+        """Inspect the Pymon's details."""
         self.pymon.inspect()
 
     def inspect_location(self):
+        """inspect the current locationÏ"""
         self.pymon.location.inspect()
 
     def move_pymon(self):
+        """Move Pymon to a new location."""
         direction = input("Moving to which direction?: ").lower()
         try:
             needs_switch = self.pymon.move(direction, self._game_state)
@@ -149,6 +163,7 @@ class Operation:
             print(e)
 
     def pick_item(self):
+        """Pick an item from the current location."""
         item_name = input("Picking what item?: ").lower()
         item = next(
             (i for i in self.pymon.location.items if i.name.lower() == item_name), None
@@ -159,9 +174,11 @@ class Operation:
             print(f"There is no {item_name} in this location.")
 
     def view_inventory(self):
+        """Display the inventory of the Pymon."""
         self.pymon.view_inventory()
 
     def challenge_creature(self):
+        """Challenge a creature in the current location."""
         creature_name = input("Challenge who?: ").lower()
         creature = next(
             (
@@ -172,29 +189,37 @@ class Operation:
             None,
         )
         if creature:
-            captured_pymon = self.pymon.challenge(creature)
-            if captured_pymon and isinstance(captured_pymon, Pymon):
-                self._game_state.bench_pymons.append(
-                    {
-                        "nickname": captured_pymon.nickname,
-                        "description": captured_pymon.description,
-                        "inventory": [],
-                        "stats": {
-                            "energy": 3,
-                            "has_immunity": False,
-                            "move_count": 0,
-                            "battle_stats": [],
-                        },
-                    }
-                )
-                print(f"{captured_pymon.nickname} has been added to your bench!")
+            try:
+                if isinstance(creature, Animal):
+                    raise AnimalCaptureError()
+                
+                captured_pymon = self.pymon.challenge(creature)
+                if captured_pymon and isinstance(captured_pymon, Pymon):
+                    self._game_state.bench_pymons.append(
+                        {
+                            "nickname": captured_pymon.nickname,
+                            "description": captured_pymon.description,
+                            "inventory": [],
+                            "stats": {
+                                "energy": MAX_ENERGY,
+                                "has_immunity": False,
+                                "move_count": 0,
+                                "battle_stats": [],
+                            },
+                        }
+                    )
+                    print(f"{captured_pymon.nickname} has been added to your bench!")
+            except AnimalCaptureError as e:
+                print(e)
         else:
             print(f"There is no creature named {creature_name} here.")
 
     def display_battle_stats(self):
+        """Display the battle stats of the Pymon."""
         self.pymon.display_battle_stats()
 
     def save_game(self):
+        """Save the current game state."""
         save_file = input("Enter save file name (default: save2024.csv): ").strip()
         if not save_file:
             save_file = "save2024.csv"
@@ -202,6 +227,7 @@ class Operation:
         print(f"Game progress saved to {save_file}")
 
     def load_game(self):
+        """Load a saved game state."""
         save_file = input(
             "Enter save file name to load (default: save2024.csv): "
         ).strip()
@@ -226,6 +252,7 @@ class Operation:
             self.generate_stats()
 
     def exit_program(self):
+        """Exit the program."""
         print("Exiting the program.")
         sys.exit(0)
 
@@ -274,7 +301,7 @@ class Operation:
         # Switch active Pymon
         self._pymon = new_pymon
         print(f"\nSwitched to {new_pymon.nickname}!")
-        print(f"Energy: {new_pymon.energy}/3")
+        print(f"Energy: {new_pymon.energy}/{MAX_ENERGY}")
 
     def save_current_pymon_data(self):
         """Save the current Pymon's data to the bench."""
@@ -410,6 +437,7 @@ class Operation:
             self.pymon.display_battle_stats()
 
     def add_custom_location(self):
+        """Handle add custom location"""
         name = input("Enter location name: ")
         description = input("Enter location description: ")
 
@@ -447,6 +475,7 @@ class Operation:
         print("Custom location added.")
 
     def add_custom_creature(self):
+        """Handle add custom creature"""
         nickname = input("Enter creature nickname: ")
         description = input("Enter creature description: ")
         adoptable = input("Is this creature adoptable (yes/no)?: ").lower()

@@ -2,7 +2,6 @@ from operation import Operation
 from record import Record
 from creature import Pymon
 import random
-import sys
 
 
 class GameLoader:

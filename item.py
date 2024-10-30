@@ -3,6 +3,10 @@ import sys
 import random
 import datetime
 
+MAX_ENERGY = 3
+ENERGY_PLUS_RATE = 1
+
+
 class Item:
     def __init__(self, name, description, can_be_picked=True, effect=None):
         self._name = name
@@ -54,8 +58,10 @@ class Item:
     def apply(self, pymon):
         """Apply the effect of the item to the Pymon."""
         if self._effect == "restore_energy":
-            pymon.energy = min(3, pymon.energy + 1)
-            print(f"{pymon.nickname}'s energy is restored! Energy: {pymon.energy}/3")
+            pymon.energy = min(MAX_ENERGY, pymon.energy + ENERGY_PLUS_RATE)
+            print(
+                f"{pymon.nickname}'s energy is restored! Energy: {pymon.energy}/{MAX_ENERGY}"
+            )
         elif self._effect == "grant_immunity":
             pymon.has_immunity = True
             print(f"{pymon.nickname} is now immune for one battle!")

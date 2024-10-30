@@ -14,6 +14,7 @@ class Location:
     # Getter and setter for name
     @property
     def name(self):
+        """Getter for name"""
         return self._name
 
     @name.setter
@@ -23,6 +24,7 @@ class Location:
     # Getter and setter for description
     @property
     def description(self):
+        """Getter for Description"""
         return self._description
 
     @description.setter
@@ -32,6 +34,7 @@ class Location:
     # Getter and setter for doors
     @property
     def doors(self):
+        """Getter for Doors"""
         return self._doors
 
     @doors.setter
@@ -44,6 +47,7 @@ class Location:
     # Getter and setter for creatures
     @property
     def creatures(self):
+        """Getter for the creatures present in the location."""
         return self._creatures
 
     @creatures.setter
@@ -80,12 +84,15 @@ class Location:
                 location.doors["north"] = self
 
     def add_creature(self, creature):
+        """Add a creature to the location."""
         self._creatures.append(creature)
 
     def add_item(self, item):
+        """Add an item to the location."""
         self._items.append(item)
 
     def inspect(self):
+        """Inspect the location and display its details."""
         print(f"You are at {self._name}. {self._description}")
         if self._creatures:
             for creature in self._creatures:

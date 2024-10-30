@@ -122,7 +122,8 @@ class GameState:
             f"{stats.get('energy', 3)},{stats.get('has_immunity', False)},{stats.get('move_count', 0)}\n"
         )
 
-        inventory = user_pymon.get("inventory", [])
+        # Save inventory items by their names only
+        inventory = [str(item) if isinstance(item, str) else item.name for item in user_pymon.get("inventory", [])]
         file.write(",".join(inventory) + "\n")
 
         self._save_battle_stats(file, stats.get("battle_stats", []))
@@ -137,7 +138,9 @@ class GameState:
         """Save the Pymons on the bench to the file."""
         file.write("[BenchPymons]\n")
         for pymon in self.bench_pymons:
-            inventory_str = ",".join(item.name for item in pymon.get("inventory", []))
+            # Save inventory items by their names only
+            inventory = [str(item) if isinstance(item, str) else item.name for item in pymon.get("inventory", [])]
+            inventory_str = ",".join(inventory)
             file.write(f"{pymon['nickname']},{pymon['description']},{inventory_str}\n")
 
     def load_game(self, file_path="save2024.csv"):
@@ -256,7 +259,7 @@ class GameState:
                     "move_count": int(move_count),
                     "battle_stats": battle_stats,
                 },
-                "inventory": inventory,
+                "inventory": inventory,  # Store inventory items as strings
             }
 
     def load_bench_pymon(self, line):
@@ -267,6 +270,6 @@ class GameState:
             {
                 "nickname": nickname,
                 "description": description,
-                "inventory": inventory_items,
+                "inventory": inventory_items,  # Store inventory items as strings
             }
         )

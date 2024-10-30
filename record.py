@@ -1,6 +1,5 @@
 import random
 import sys
-
 from creature import Pymon, Animal
 from exceptions import InvalidInputFileFormat
 from item import Item
@@ -103,88 +102,105 @@ class Record:
             # Load the game state
             self._game_state.load_game(file_path)
 
-            # Reconstruct locations
-            self._locations = []
-            location_dict = {}
-
-            # First pass: Create location objects
-            for name, data in self._game_state.locations.items():
-                location = Location(name, data["description"])
-                self._locations.append(location)
-                location_dict[name] = location
-
-            # Second pass: Connect locations
-            for name, data in self._game_state.locations.items():
-                location = location_dict[name]
-                for dir, connected_name in data["connections"].items():
-                    if connected_name in location_dict:
-                        location.doors[dir] = location_dict[connected_name]
-
-            # Reconstruct creatures
-            self._creatures = []
-            for name, data in self._game_state.creatures.items():
-                if data["is_pymon"]:
-                    creature = Pymon(name, data["description"])
-                else:
-                    creature = Animal(name, data["description"])
-
-                if data["location"] != "None" and data["location"] in location_dict:
-                    creature.location = location_dict[data["location"]]
-                    creature.location.add_creature(creature)
-
-                self._creatures.append(creature)
-
-            # Reconstruct current Pymon if exists
-            user_data = self._game_state.user_pymon
-            if user_data and isinstance(user_data, dict):
-                current_pymon = Pymon(user_data["nickname"], user_data["description"])
-
-                # Set location
-                if (
-                    user_data["location"] != "None"
-                    and user_data["location"] in location_dict
-                ):
-                    current_pymon.location = location_dict[user_data["location"]]
-
-                # Set stats
-                if "stats" in user_data:
-                    stats = user_data["stats"]
-                    current_pymon.energy = stats.get("energy", 3)
-                    current_pymon.has_immunity = stats.get("has_immunity", False)
-                    current_pymon.move_count = stats.get("move_count", 0)
-                    current_pymon.battle_stats = stats.get("battle_stats", [])
-
-                # Set inventory
-                if "inventory" in user_data:
-                    for item_name in user_data["inventory"]:
-                        # Find the item in locations
-                        for location in self._locations:
-                            item = next(
-                                (i for i in location.items if i.name == item_name), None
-                            )
-                            if item:
-                                current_pymon.inventory.append(item)
-                                location.items.remove(item)
-                                break
-
-                self._current_pymon = current_pymon
-
-            # Reconstruct bench Pymons
-            bench_pymons = []
-            for pymon_data in self._game_state.bench_pymons:
-                bench_pymon = {
-                    "nickname": pymon_data["nickname"],
-                    "description": pymon_data["description"],
-                    "inventory": pymon_data["inventory"],
-                }
-                bench_pymons.append(bench_pymon)
-            self._game_state.bench_pymons = bench_pymons
+            # Reconstruct game components
+            location_dict = self._reconstruct_locations()
+            self._creatures = self._reconstruct_creatures(location_dict)
+            self._current_pymon = self._reconstruct_user_pymon(location_dict)
+            self._reconstruct_bench_pymons()
 
             print(f"Game state loaded from {file_path}")
             return self._current_pymon
         except Exception as e:
             print(f"Failed to load game state: {str(e)}")
             return None
+
+    def _reconstruct_locations(self):
+        """Reconstruct all locations from the saved game state."""
+        self._locations = []
+        location_dict = {}
+
+        # First pass: Create location objects
+        for name, data in self._game_state.locations.items():
+            location = Location(name, data["description"])
+            self._locations.append(location)
+            location_dict[name] = location
+
+        # Second pass: Connect locations
+        for name, data in self._game_state.locations.items():
+            location = location_dict[name]
+            for dir, connected_name in data["connections"].items():
+                if connected_name in location_dict:
+                    location.doors[dir] = location_dict[connected_name]
+
+        return location_dict
+
+    def _reconstruct_creatures(self, location_dict):
+        """Reconstruct all creatures from the saved game state."""
+        creatures = []
+        for name, data in self._game_state.creatures.items():
+            creature = (
+                Pymon(name, data["description"])
+                if data["is_pymon"]
+                else Animal(name, data["description"])
+            )
+
+            if data["location"] != "None" and data["location"] in location_dict:
+                creature.location = location_dict[data["location"]]
+                creature.location.add_creature(creature)
+
+            creatures.append(creature)
+
+        return creatures
+
+    def _reconstruct_user_pymon(self, location_dict):
+        """Reconstruct the current user's Pymon if it exists in the saved game state."""
+        user_data = self._game_state.user_pymon
+        if user_data and isinstance(user_data, dict):
+            current_pymon = Pymon(user_data["nickname"], user_data["description"])
+
+            # Set location
+            if (
+                user_data["location"] != "None"
+                and user_data["location"] in location_dict
+            ):
+                current_pymon.location = location_dict[user_data["location"]]
+
+            # Set stats
+            stats = user_data.get("stats", {})
+            current_pymon.energy = stats.get("energy", 3)
+            current_pymon.has_immunity = stats.get("has_immunity", False)
+            current_pymon.move_count = stats.get("move_count", 0)
+            current_pymon.battle_stats = stats.get("battle_stats", [])
+
+            # Set inventory
+            if "inventory" in user_data:
+                self._set_pymon_inventory(current_pymon, user_data["inventory"])
+
+            return current_pymon
+        return None
+
+    def _set_pymon_inventory(self, pymon, inventory):
+        """Assign inventory items to a Pymon."""
+        for item_name in inventory:
+            # Find the item in locations
+            for location in self._locations:
+                item = next((i for i in location.items if i.name == item_name), None)
+                if item:
+                    pymon.inventory.append(item)
+                    location.items.remove(item)
+                    break
+
+    def _reconstruct_bench_pymons(self):
+        """Reconstruct bench Pymons from the saved game state."""
+        bench_pymons = []
+        for pymon_data in self._game_state.bench_pymons:
+            bench_pymon = {
+                "nickname": pymon_data["nickname"],
+                "description": pymon_data["description"],
+                "inventory": pymon_data["inventory"],
+            }
+            bench_pymons.append(bench_pymon)
+        self._game_state.bench_pymons = bench_pymons
 
     def load_data(
         self,

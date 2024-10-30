@@ -3,6 +3,10 @@ from exceptions import *
 import sys
 import random
 import datetime
+from item import MAX_ENERGY
+
+THRESHOLD = 2  # Number of wins needed to capture a creature
+LOSS_ENERGY_RATE = -1
 
 
 class Creature:
@@ -43,7 +47,7 @@ class Creature:
 class Pymon(Creature):
     def __init__(self, nickname, description, location=None):
         super().__init__(nickname, description, location)
-        self._energy = 3
+        self._energy = MAX_ENERGY
         self._inventory = []  # Pymon inventory to store items
         self._has_immunity = False
         self._move_count = 0
@@ -64,10 +68,11 @@ class Pymon(Creature):
 
     @energy.setter
     def energy(self, new_energy):
-        if 0 <= new_energy <= 3:
+        if 0 <= new_energy <= MAX_ENERGY:
             self._energy = new_energy
         else:
-            raise ValueError("Energy must be between 0 and 3.")
+            # Instead of raising an error, clamp the value
+            self._energy = max(0, min(new_energy, MAX_ENERGY))
 
     # Getter and setter for inventory
     @property
@@ -163,9 +168,9 @@ class Pymon(Creature):
 
     def decrease_energy(self):
         """Decrease Pymon's energy after every 2 moves and display the status."""
-        self._energy -= 1
+        self.energy = self.energy - 1
         print(
-            f"{self.nickname} lost 1 energy due to movement. Energy: {self._energy}/3"
+            f"{self.nickname} lost 1 energy due to movement. Energy: {self._energy}/{MAX_ENERGY}"
         )
 
     def handle_energy_depletion(self, game_state):
@@ -204,14 +209,14 @@ class Pymon(Creature):
         sys.exit(0)
 
     def inspect(self):
-        print(f"Pymon {self.nickname}: {self.description}, Energy: {self._energy}/3")
+        print(f"Pymon {self.nickname}: {self.description}, Energy: {self._energy}/{MAX_ENERGY}")
 
     def challenge(self, creature):
         print(f"{creature.nickname} gladly accepted your challenge! Ready for battle!")
         wins, losses, draws = 0, 0, 0
         had_immunity = self._has_immunity  # Store initial immunity state
 
-        while wins < 2 and losses < 2 and self._energy > 0:
+        while wins < THRESHOLD and losses < THRESHOLD and self._energy > 0:
             player_choice = self.get_player_choice()
             if not player_choice:
                 continue
@@ -252,11 +257,13 @@ class Pymon(Creature):
     def handle_loss(self):
         """Handle the case where the player loses an encounter."""
         if not self._has_immunity:
-            self._energy -= 1
-            print(f"You lost 1 encounter and lost 1 energy. Energy: {self._energy}/3")
+            self.energy = self.energy + LOSS_ENERGY_RATE  # Use energy setter
+            print(
+                f"You lost 1 encounter and lost 1 energy. Energy: {self._energy}/{MAX_ENERGY}"
+            )
         else:
             print(
-                f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/3"
+                f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/{MAX_ENERGY}"
             )
             self._has_immunity = False  # Remove immunity after it's used
 
@@ -284,7 +291,6 @@ class Pymon(Creature):
         )
 
     def handle_battle_outcome(self, creature, wins):
-        """Handle the outcome of the battle and return the captured creature if applicable."""
         if wins == 2:
             print(f"Congrats! You won the battle and captured {creature.nickname}!")
             self.capture_creature(creature)
@@ -300,6 +306,7 @@ class Pymon(Creature):
         creature.location = None
 
     def display_battle_stats(self):
+        """Get and display the battle statistics for the Pymon."""
         total_wins, total_draws, total_losses = 0, 0, 0
         print(f'Pymon Nickname: "{self.nickname}"')
         for i, stat in enumerate(self._battle_stats, start=1):
@@ -421,8 +428,10 @@ class Pymon(Creature):
 
 # Animal class (inherits Creature)
 class Animal(Creature):
+    """Class representing an animal in the game. An nimal cannot be pickup or used in battle."""
     def __init__(self, nickname, description, location=None):
         super().__init__(nickname, description, location)
 
     def inspect(self):
+        """Inspect the animal and display its details."""
         print(f"Animal {self.nickname}: {self.description}")

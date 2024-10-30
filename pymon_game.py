@@ -2,10 +2,11 @@ from game_loader import GameLoader
 import sys
 
 
-# Main execution
 def main():
+    """Main function to start the game."""
     game = GameLoader()
     game.start_game(sys.argv)
+
 
 ## Main Programm Start Here
 if __name__ == "__main__":
