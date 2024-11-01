@@ -371,7 +371,7 @@ class Pymon(Creature):
                 f"{self.nickname} used the magic potion and is now immune for one battle."
             )
         else:
-            print(f"{self.nickname} already has immunity active.")
+            print(f"{self.nickname} already has immunity active. Potion cannot be used.")
 
     def use_binocular(self):
         """Handle the case where binoculars are used."""

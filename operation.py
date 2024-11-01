@@ -121,16 +121,14 @@ class Operation:
         print("10) Add custom location")
         print("11) Add custom creature")
         print("12) Display setup")
-        print("13) View bench Pymons")
-        print("14) Switch active Pymon")
-        print("15) Exit the program")
+        print("13) Exit the program")
 
     def command_multiplexer(self, command):
         """Multiplex the command to the corresponding function."""
         try:
             user_command = int(command)
             if user_command == 1:
-                self.pymon.inspect()
+                self.inspect_pymon_submenu()
             elif user_command == 2:
                 self.pymon.location.inspect()
             elif user_command == 3:
@@ -154,15 +152,24 @@ class Operation:
             elif user_command == 12:
                 self.display_setup()
             elif user_command == 13:
-                self.view_pymons()
-            elif user_command == 14:
-                self.switch_active_pymon()
-            elif user_command == 15:
                 self.quit()
             else:
-                print("Invalid command. Please enter a number between 1 and 15.")
+                print("Invalid command. Please enter a valid number.")
         except ValueError:
-            print("Invalid command. Please enter a number between 1 and 15.")
+            print("Invalid command. Please enter a valid number.")
+
+    def inspect_pymon_submenu(self):
+        """Display submenu for Inspect Pymon."""
+        print("\n1.1) Inspect current Pymon")
+        print("1.2) Switch active Pymon")
+        sub_command = input("Enter your sub-command: ")
+        if sub_command == "1.1":
+            self.pymon.inspect()
+        elif sub_command == "1.2":
+            self.view_pymons()
+            self.switch_active_pymon()
+        else:
+            print("Invalid sub-command. Please enter a valid number.")
 
     def move_pymon(self):
         """Move Pymon to a new location."""
@@ -200,7 +207,8 @@ class Operation:
         if creature:
             try:
                 if isinstance(creature, Animal):
-                    raise AnimalCaptureError()
+                    print(f"The {creature.nickname} just ignored you.")
+                    return
 
                 captured_pymon = self.pymon.challenge(creature)
                 if captured_pymon and isinstance(captured_pymon, Pymon):
@@ -447,62 +455,148 @@ class Operation:
 
     def add_custom_location(self):
         """Handle add custom location"""
-        name = input("Enter location name: ")
-        description = input("Enter location description: ")
+        # Get location details with validation for blank fields
+        name = input("Enter location name: ").strip()
+        if not name:
+            print("Error: Location name cannot be blank")
+            return
 
-        doors = {}
+        description = input("Enter location description: ").strip()
+        if not description:
+            print("Error: Location description cannot be blank")
+            return
+
+        # Initialize doors dictionary
+        doors = {"west": None, "north": None, "east": None, "south": None}
+        has_connection = False
+
+        # Get door connections
         for direction in ["west", "north", "east", "south"]:
-            connect = (
-                input(
-                    f"Do you want to connect a location to the {direction}? (yes/no): "
-                )
-                .strip()
-                .lower()
-            )
+            connect = input(f"Do you want to connect a location to the {direction}? (yes/no): ").strip().lower()
             if connect == "yes":
-                doors[direction] = input(f"Enter {direction} door: ").strip()
-            else:
-                doors[direction] = "None"
+                connected_loc = input(f"Enter {direction} door: ").strip()
+                if connected_loc:
+                    doors[direction] = connected_loc
+                    has_connection = True
+                else:
+                    print(f"Error: Connected location name cannot be blank")
+                    return
 
-        loc = Location(name, description)
-        loc.doors = doors
-        self.record.locations.append(loc)
+        # Ensure at least one connection is specified
+        if not has_connection:
+            print("Error: At least one connection must be specified")
+            return
 
+        try:
+            # Create and validate the new location
+            location_instance = Location(name, description)
+            location_instance.validate_new_location(name, doors, self.record.locations)
+
+            # Create the new location and add it to record
+            new_loc = Location(name, description)
+            new_loc.doors = doors
+            self.record.locations.append(new_loc)
+
+            # Update the CSV file with bi-directional connections
+            self.update_locations_csv(new_loc)
+            print("Custom location added successfully.")
+
+        except ValueError as e:
+            print(f"Error: {str(e)}")
+
+    def update_locations_csv(self, new_location):
+        """Update the locations.csv file with the new location and update bi-directional connections"""
+        # Read existing locations
         with open("locations.csv", "r") as file:
-            lines = file.readlines()
+            lines = [line.strip() for line in file.readlines() if line.strip()]
 
-        with open("locations.csv", "a") as file:
-            if any(not line.strip() for line in lines):
-                file.write(
-                    f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n"
-                )
-            else:
-                file.write("\n")
-                file.write(
-                    f"{name}, {description}, west = {doors['west']}, north = {doors['north']}, east = {doors['east']}, south = {doors['south']}\n"
-                )
-        print("Custom location added.")
+        # Update existing locations for bi-directional connections
+        updated_lines = []
+        for line in lines:
+            parts = [part.strip() for part in line.split(',')]
+            if len(parts) >= 6:  # Ensure line has all required parts
+                loc_name = parts[0]
+                loc_desc = parts[1]
+                doors = {
+                    "west": parts[2].split('=')[1].strip(),
+                    "north": parts[3].split('=')[1].strip(),
+                    "east": parts[4].split('=')[1].strip(),
+                    "south": parts[5].split('=')[1].strip()
+                }
+
+                # Update bi-directional connections
+                for direction, connected_loc in new_location.doors.items():
+                    if connected_loc == loc_name:
+                        opposite_direction = {
+                            "west": "east",
+                            "east": "west",
+                            "north": "south",
+                            "south": "north"
+                        }[direction]
+                        doors[opposite_direction] = new_location.name
+
+                # Create updated line
+                updated_line = (f"{loc_name}, {loc_desc}, "
+                              f"west = {doors['west']}, "
+                              f"north = {doors['north']}, "
+                              f"east = {doors['east']}, "
+                              f"south = {doors['south']}")
+                updated_lines.append(updated_line)
+
+        # Add the new location
+        new_line = (f"{new_location.name}, {new_location.description}, "
+                   f"west = {new_location.doors['west']}, "
+                   f"north = {new_location.doors['north']}, "
+                   f"east = {new_location.doors['east']}, "
+                   f"south = {new_location.doors['south']}")
+        updated_lines.append(new_line)
+
+        # Write all locations back to CSV
+        with open("locations.csv", "w") as file:
+            file.write("\n".join(updated_lines) + "\n")
 
     def add_custom_creature(self):
         """Handle add custom creature"""
-        nickname = input("Enter creature nickname: ")
-        description = input("Enter creature description: ")
-        adoptable = input("Is this creature adoptable (yes/no)?: ").lower()
+        # Get creature details with validation for blank fields
+        nickname = input("Enter creature nickname: ").strip()
+        if not nickname:
+            print("Error: Creature nickname cannot be blank")
+            return
+
+        description = input("Enter creature description: ").strip()
+        if not description:
+            print("Error: Creature description cannot be blank")
+            return
+
+        adoptable = input("Is this creature adoptable (yes/no)?: ").strip().lower()
+        if not adoptable or adoptable not in ["yes", "no"]:
+            print("Error: Adoptable field must be either 'yes' or 'no'")
+            return
+
+        # Create the creature
         creature = (
             Pymon(nickname, description)
             if adoptable == "yes"
             else Animal(nickname, description)
         )
 
+        # Add to record
         self.record.creatures.append(creature)
 
-        with open("creatures.csv", "r") as file:
-            lines = file.readlines()
+        # Read existing content
+        try:
+            with open("creatures.csv", "r") as file:
+                lines = file.readlines()
+                # Remove any empty lines at the end
+                while lines and not lines[-1].strip():
+                    lines.pop()
+        except FileNotFoundError:
+            lines = []
 
+        # Write the new creature
         with open("creatures.csv", "a") as file:
-            if any(not line.strip() for line in lines):
-                file.write(f"{nickname}, {description}, {adoptable}\n")
-            else:
-                file.write("\n")
-                file.write(f"{nickname}, {description}, {adoptable}\n")
-        print("Custom creature added.")
+            if lines and not lines[-1].endswith('\n'):
+                file.write('\n')  # Add newline if the last line doesn't have one
+            file.write(f"{nickname}, {description}, {adoptable}\n")
+        
+        print("Custom creature added successfully.")

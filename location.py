@@ -1,6 +1,7 @@
 import sys
 import random
 import datetime
+import csv
 
 
 class Location:
@@ -99,3 +100,62 @@ class Location:
                 print(f"Item present: {item.name} - {item.description}")
         else:
             print("No items here.")
+
+    def validate_new_location(self, new_name, new_doors, existing_locations):
+        """Validate a new location against existing ones."""
+        # Check for blank fields
+        if not new_name:
+            raise ValueError("Location name must be specified.")
+
+        # Ensure at least one direction is not None
+        if all(direction is None for direction in new_doors.values()):
+            raise ValueError("At least one direction must be specified.")
+
+        # Check for unique location name
+        if new_name in [loc.name for loc in existing_locations]:
+            raise ValueError("Location name must be unique.")
+
+        # Check for similar locations
+        for loc in existing_locations:
+            if loc.doors == new_doors:
+                raise ValueError("A similar location with the same connections already exists.")
+
+        # Check if all specified directions exist
+        for direction, location_name in new_doors.items():
+            if location_name and location_name not in [loc.name for loc in existing_locations]:
+                raise ValueError(f"Location in direction {direction} does not exist: {location_name}")
+
+    def update_csv_with_new_location(self, new_location, csv_path='locations.csv'):
+        """Update the CSV file with the new location and its connections."""
+        # Read existing locations
+        with open(csv_path, mode='r') as file:
+            reader = csv.reader(file)
+            locations = list(reader)
+
+        # Update connections for existing locations
+        updated_locations = []
+        for loc in locations:
+            loc_name, loc_desc, *loc_doors = loc
+            loc_doors_dict = dict(zip(["west", "north", "east", "south"], loc_doors))
+            for direction, connected_loc in loc_doors_dict.items():
+                if connected_loc == new_location.name:
+                    loc_doors_dict[direction] = new_location.name
+                # Ensure bidirectional update
+                if direction == "west" and loc_doors_dict["east"] == new_location.name:
+                    loc_doors_dict["east"] = loc_name
+                elif direction == "north" and loc_doors_dict["south"] == new_location.name:
+                    loc_doors_dict["south"] = loc_name
+                elif direction == "east" and loc_doors_dict["west"] == new_location.name:
+                    loc_doors_dict["west"] = loc_name
+                elif direction == "south" and loc_doors_dict["north"] == new_location.name:
+                    loc_doors_dict["north"] = loc_name
+            updated_locations.append([loc_name, loc_desc] + list(loc_doors_dict.values()))
+
+        # Add the new location
+        new_loc_entry = [new_location.name, new_location.description] + list(new_location.doors.values())
+        updated_locations.append(new_loc_entry)
+
+        # Write updated locations back to CSV
+        with open(csv_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(updated_locations)
