@@ -381,7 +381,7 @@ class Operation:
             print("Your bench is empty. Capture some Pymons in battle!")
             return
 
-        print("\n=== Your Bench Pymons ===")
+        print("\n### Bench Pymons ###")
         for i, pymon in enumerate(self.game_state.bench_pymons, 1):
             print(f"\n{i}) {pymon['nickname']}")
             print(f"   Description: {pymon['description']}")

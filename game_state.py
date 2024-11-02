@@ -24,18 +24,28 @@ class GameState:
             self.creatures = {}  # Dictionary to store creature states
             self._initialized = True  # Mark as initialized to prevent reinitialization
 
+    def _parse_line(self, line):
+        """Helper method to parse CSV lines into parts."""
+        return [p.strip() for p in line.split(",")]
+
+    def _parse_inventory(self, inventory_str):
+        """Helper method to parse inventory string into a list of items."""
+        if not inventory_str:
+            return []
+        return [item.strip() for item in inventory_str.split(",")]
+
     def handle_pymon_defeat(self):
         """Handle the case when the current Pymon is defeated."""
         if not self.bench_pymons:
             return None  # No backup Pymons available
-        
+
         # Get the next Pymon from the bench
         next_pymon = self.bench_pymons.pop(0)
-        
+
         # Inherit inventory from defeated Pymon
         if self.user_pymon and "inventory" in self.user_pymon:
             next_pymon["inventory"].extend(self.user_pymon.get("inventory", []))
-        
+
         # Set up the new Pymon with full energy
         self.user_pymon = {
             "nickname": next_pymon["nickname"],
@@ -49,7 +59,7 @@ class GameState:
             },
             "inventory": next_pymon["inventory"]
         }
-        
+
         return self.user_pymon
 
     def restore_captured_pymon(self, pymon_name, description):
@@ -142,7 +152,7 @@ class GameState:
             for direction in ["west", "north", "east", "south"]:
                 location = connections.get(direction, "None")
                 connections_list.append(f"{direction} = {location}")
-            
+
             # Join all parts with the correct delimiter format
             line = f"{loc_name}, {desc}, {', '.join(connections_list)}\n"
             f.write(line)
@@ -171,7 +181,12 @@ class GameState:
         )
 
         # Save inventory items by their names only
-        inventory = [str(item) if isinstance(item, str) else item.name for item in user_pymon.get("inventory", [])]
+        inventory = []
+        for item in user_pymon.get("inventory", []):
+            if isinstance(item, str):
+                inventory.append(str(item))
+            else:
+                inventory.append(item.name)
         f.write(", ".join(inventory) + "\n")
 
         self._save_stats_battle(f, stats.get("battle_stats", []))
@@ -187,7 +202,12 @@ class GameState:
         f.write("[BenchPymons]\n")
         for pymon in self.bench_pymons:
             # Save inventory items by their names only
-            inventory = [str(item) if isinstance(item, str) else item.name for item in pymon.get("inventory", [])]
+            inventory = []
+            for item in pymon.get("inventory", []):
+                if isinstance(item, str):
+                    inventory.append(str(item))
+                else:
+                    inventory.append(item.name)
             inventory_str = ", ".join(inventory)
             f.write(f"{pymon['nickname']}, {pymon['description']}, {inventory_str}\n")
 
@@ -241,7 +261,7 @@ class GameState:
         """Load an item from the save file."""
         if "," not in line:
             return
-        parts = [p.strip() for p in line.split(",")]
+        parts = self._parse_line(line)
         if len(parts) < 4:
             return
         name, location, is_pickable, is_consumable = parts
@@ -255,12 +275,12 @@ class GameState:
         """Load a location from the save file."""
         if "," not in line:
             return
-        parts = [p.strip() for p in line.split(",")]
+        parts = self._parse_line(line)
         if len(parts) < 3:
             return
         name = parts[0]
         desc = parts[1]
-        
+
         # Process connections
         connections_dict = {}
         for conn in parts[2:]:
@@ -278,7 +298,7 @@ class GameState:
         """Load a creature from the save file."""
         if "," not in line:
             return
-        parts = [p.strip() for p in line.split(",")]
+        parts = self._parse_line(line)
         if len(parts) < 4:
             return
         name, desc, loc, is_pymon = parts
@@ -294,7 +314,7 @@ class GameState:
             return
 
         # First line contains nickname and description
-        parts = [p.strip() for p in lines[0].split(",", 1)]
+        parts = self._parse_line(lines[0])
         if len(parts) < 2:
             return
         nickname, desc = parts
@@ -303,13 +323,13 @@ class GameState:
         location = lines[1].strip()
 
         # Third line contains stats
-        stats_parts = [p.strip() for p in lines[2].split(",")]
+        stats_parts = self._parse_line(lines[2])
         if len(stats_parts) < 3:
             return
         energy, has_immunity, move_count = stats_parts
 
         # Fourth line contains inventory
-        inventory = [item.strip() for item in lines[3].split(",")] if lines[3] else []
+        inventory = self._parse_inventory(lines[3])
 
         self.user_pymon = {
             "nickname": nickname,
@@ -326,7 +346,7 @@ class GameState:
 
     def load_battle_stats(self, line, battle_stats):
         """Load battle statistics for the user's Pymon."""
-        parts = [p.strip() for p in line.split(",")]
+        parts = self._parse_line(line)
         if len(parts) == 5:
             timestamp, opponent, wins, draws, losses = parts
             battle_stats.append({
@@ -342,11 +362,11 @@ class GameState:
         """Load a Pymon from the bench in the save file."""
         if "," not in line:
             return
-        parts = [p.strip() for p in line.split(",", 2)]
+        parts = self._parse_line(line)
         if len(parts) < 3:
             return
         nickname, desc, inventory = parts
-        inventory_items = [item.strip() for item in inventory.split(",")] if inventory else []
+        inventory_items = self._parse_inventory(inventory)
         self.bench_pymons.append({
             "nickname": nickname,
             "description": desc,
