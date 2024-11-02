@@ -84,7 +84,7 @@ class GameState:
         for item_name, data in self.items.items():
             location = data.get("location", "None")
             is_pickable = data.get("is_pickable", True)
-            file.write(f"{item_name},{location},{is_pickable}\n")
+            file.write(f"{item_name}, {location}, {is_pickable}\n")
 
     def _save_locations(self, f):
         """Save all locations to the file."""
@@ -92,10 +92,15 @@ class GameState:
         for loc_name, data in self.locations.items():
             desc = data.get("description", "")
             connections = data.get("connections", {})
-            connections_str = ";".join(
-                [f"{dir}={loc}" for dir, loc in connections.items()]
-            )
-            f.write(f"{loc_name},{desc},{connections_str}\n")
+            # Create a list of direction-location pairs in the correct format
+            connections_list = []
+            for direction in ["west", "north", "east", "south"]:
+                location = connections.get(direction, "None")
+                connections_list.append(f"{direction} = {location}")
+            
+            # Join all parts with the correct delimiter format
+            line = f"{loc_name}, {desc}, {', '.join(connections_list)}\n"
+            f.write(line)
 
     def _save_creatures(self, f):
         """Save all creatures to the file."""
@@ -104,32 +109,32 @@ class GameState:
             desc = data.get("description", "")
             loc = data.get("location", "None")
             is_pymon = data.get("is_pymon", False)
-            f.write(f"{creature_name},{desc},{loc},{is_pymon}\n")
+            f.write(f"{creature_name}, {desc}, {loc}, {is_pymon}\n")
 
     def _save_user_pymon(self, f):
         """Save the current user's Pymon to the file."""
         f.write("[UserPymon]\n")
         user_pymon = self.user_pymon
         f.write(
-            f"{user_pymon.get('nickname', '')},{user_pymon.get('description', '')}\n"
+            f"{user_pymon.get('nickname', '')}, {user_pymon.get('description', '')}\n"
         )
         f.write(f"{user_pymon.get('location', 'None')}\n")
 
         stats = user_pymon.get("stats", {})
         f.write(
-            f"{stats.get('energy', 3)},{stats.get('has_immunity', False)},{stats.get('move_count', 0)}\n"
+            f"{stats.get('energy', 3)}, {stats.get('has_immunity', False)}, {stats.get('move_count', 0)}\n"
         )
 
         # Save inventory items by their names only
         inventory = [str(item) if isinstance(item, str) else item.name for item in user_pymon.get("inventory", [])]
-        f.write(",".join(inventory) + "\n")
+        f.write(", ".join(inventory) + "\n")
 
         self._save_stats_battle(f, stats.get("battle_stats", []))
 
     def _save_stats_battle(self, file, battle_stats):
         """Save the battle statistics of the user's Pymon."""
         for stat in battle_stats:
-            stat_str = f"{stat['timestamp']},{stat['opponent']},{stat['wins']},{stat['draws']},{stat['losses']}"
+            stat_str = f"{stat['timestamp']}, {stat['opponent']}, {stat['wins']}, {stat['draws']}, {stat['losses']}"
             file.write(stat_str + "\n")
 
     def _save_bench(self, f):
@@ -138,8 +143,8 @@ class GameState:
         for pymon in self.bench_pymons:
             # Save inventory items by their names only
             inventory = [str(item) if isinstance(item, str) else item.name for item in pymon.get("inventory", [])]
-            inventory_str = ",".join(inventory)
-            f.write(f"{pymon['nickname']},{pymon['description']},{inventory_str}\n")
+            inventory_str = ", ".join(inventory)
+            f.write(f"{pymon['nickname']}, {pymon['description']}, {inventory_str}\n")
 
     def load_game(self, file_path="save2024.csv"):
         """
@@ -191,7 +196,7 @@ class GameState:
         """Load an item from the save file."""
         if "," not in line:
             return
-        parts = line.split(",")
+        parts = [p.strip() for p in line.split(",")]
         if len(parts) < 3:
             return
         name, location, is_pickable = parts
@@ -204,16 +209,20 @@ class GameState:
         """Load a location from the save file."""
         if "," not in line:
             return
-        parts = line.split(",", 2)
+        parts = [p.strip() for p in line.split(",")]
         if len(parts) < 3:
             return
-        name, desc, connections = parts
+        name = parts[0]
+        desc = parts[1]
+        
+        # Process connections
         connections_dict = {}
-        if connections:
-            for conn in connections.split(";"):
-                if "=" in conn:
-                    dir, loc = conn.split("=")
-                    connections_dict[dir] = loc
+        for conn in parts[2:]:
+            if "=" in conn:
+                direction, loc = [p.strip() for p in conn.split("=")]
+                if loc.lower() != "none":
+                    connections_dict[direction] = loc
+
         self.locations[name] = {
             "description": desc,
             "connections": connections_dict,
@@ -223,7 +232,7 @@ class GameState:
         """Load a creature from the save file."""
         if "," not in line:
             return
-        parts = line.split(",")
+        parts = [p.strip() for p in line.split(",")]
         if len(parts) < 4:
             return
         name, desc, loc, is_pymon = parts
@@ -239,22 +248,22 @@ class GameState:
             return
 
         # First line contains nickname and description
-        nickname_desc = lines[0].split(",", 1)
-        if len(nickname_desc) < 2:
+        parts = [p.strip() for p in lines[0].split(",", 1)]
+        if len(parts) < 2:
             return
-        nickname, desc = nickname_desc
+        nickname, desc = parts
 
         # Second line contains location
-        location = lines[1]
+        location = lines[1].strip()
 
         # Third line contains stats
-        stats_parts = lines[2].split(",")
+        stats_parts = [p.strip() for p in lines[2].split(",")]
         if len(stats_parts) < 3:
             return
         energy, has_immunity, move_count = stats_parts
 
         # Fourth line contains inventory
-        inventory = lines[3].split(",") if lines[3] else []
+        inventory = [item.strip() for item in lines[3].split(",")] if lines[3] else []
 
         self.user_pymon = {
             "nickname": nickname,
@@ -271,7 +280,7 @@ class GameState:
 
     def load_battle_stats(self, line, battle_stats):
         """Load battle statistics for the user's Pymon."""
-        parts = line.split(",")
+        parts = [p.strip() for p in line.split(",")]
         if len(parts) == 5:
             timestamp, opponent, wins, draws, losses = parts
             battle_stats.append({
@@ -287,11 +296,11 @@ class GameState:
         """Load a Pymon from the bench in the save file."""
         if "," not in line:
             return
-        parts = line.split(",", 2)
+        parts = [p.strip() for p in line.split(",", 2)]
         if len(parts) < 3:
             return
         nickname, desc, inventory = parts
-        inventory_items = inventory.split(",") if inventory else []
+        inventory_items = [item.strip() for item in inventory.split(",")] if inventory else []
         self.bench_pymons.append({
             "nickname": nickname,
             "description": desc,
