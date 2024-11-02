@@ -1,13 +1,11 @@
-import sys
-import random
-import datetime
 import csv
 
 
 class Location:
-    def __init__(self, name, description):
+    def __init__(self, name, desc):
+        """Initialize the Location object."""
         self._name = name
-        self._description = description
+        self._desc = desc
         self._doors = {"west": None, "north": None, "east": None, "south": None}
         self._creatures = []
         self._items = []
@@ -22,13 +20,14 @@ class Location:
         self._name = new_name
 
     @property
-    def description(self):
+    def desc(self):
         """Getter for Description"""
-        return self._description
+        return self._desc
 
-    @description.setter
-    def description(self, new_description):
-        self._description = new_description
+    @desc.setter
+    def desc(self, new_description):
+        """Setter for Description"""
+        self._desc = new_description
 
     @property
     def doors(self):
@@ -37,6 +36,7 @@ class Location:
 
     @doors.setter
     def doors(self, new_doors):
+        """Setter for Doors"""
         if isinstance(new_doors, dict):
             self._doors = new_doors
         else:
@@ -49,6 +49,7 @@ class Location:
 
     @creatures.setter
     def creatures(self, new_creatures):
+        """Setter for the creatures present in the location."""
         if isinstance(new_creatures, list):
             self._creatures = new_creatures
         else:
@@ -56,28 +57,16 @@ class Location:
 
     @property
     def items(self):
+        """Getter for the items present in the location."""
         return self._items
 
     @items.setter
     def items(self, new_items):
+        """Setter for the items present in the location."""
         if isinstance(new_items, list):
             self.items = new_items
         else:
             raise ValueError("Items must be a list")
-
-    def connect(self, direction, location):
-        """Connect this location to another one in a given direction."""
-        if direction in self.doors:
-            self.doors[direction] = location
-            # Connect the other location in the opposite direction
-            if direction == "west":
-                location.doors["east"] = self
-            elif direction == "north":
-                location.doors["south"] = self
-            elif direction == "east":
-                location.doors["west"] = self
-            elif direction == "south":
-                location.doors["north"] = self
 
     def add_creature(self, creature):
         """Add a creature to the location."""
@@ -89,19 +78,19 @@ class Location:
 
     def inspect(self):
         """Inspect the location and display its details."""
-        print(f"You are at {self._name}. {self._description}")
+        print(f"You are at {self._name}. {self._desc}")
         if self._creatures:
             for creature in self._creatures:
-                print(f"Creature present: {creature.nickname} - {creature.description}")
+                print(f"Creature present: {creature.nickname} - {creature.desc}")
         else:
             print("No creatures here.")
         if self._items:
             for item in self._items:
-                print(f"Item present: {item.name} - {item.description}")
+                print(f"Item present: {item.name} - {item.desc}")
         else:
             print("No items here.")
 
-    def validate_new_location(self, new_name, new_doors, existing_locations):
+    def validate_new_loc(self, new_name, new_doors, existing_loc):
         """Validate a new location against existing ones."""
         # Check for blank fields
         if not new_name:
@@ -112,50 +101,15 @@ class Location:
             raise ValueError("At least one direction must be specified.")
 
         # Check for unique location name
-        if new_name in [loc.name for loc in existing_locations]:
+        if new_name in [loc.name for loc in existing_loc]:
             raise ValueError("Location name must be unique.")
 
         # Check for similar locations
-        for loc in existing_locations:
+        for loc in existing_loc:
             if loc.doors == new_doors:
                 raise ValueError("A similar location with the same connections already exists.")
 
         # Check if all specified directions exist
-        for direction, location_name in new_doors.items():
-            if location_name and location_name not in [loc.name for loc in existing_locations]:
-                raise ValueError(f"Location in direction {direction} does not exist: {location_name}")
-
-    def update_csv_with_new_location(self, new_location, csv_path='locations.csv'):
-        """Update the CSV file with the new location and its connections."""
-        # Read existing locations
-        with open(csv_path, mode='r') as file:
-            reader = csv.reader(file)
-            locations = list(reader)
-
-        # Update connections for existing locations
-        updated_locations = []
-        for loc in locations:
-            loc_name, loc_desc, *loc_doors = loc
-            loc_doors_dict = dict(zip(["west", "north", "east", "south"], loc_doors))
-            for direction, connected_loc in loc_doors_dict.items():
-                if connected_loc == new_location.name:
-                    loc_doors_dict[direction] = new_location.name
-                # Ensure bidirectional update
-                if direction == "west" and loc_doors_dict["east"] == new_location.name:
-                    loc_doors_dict["east"] = loc_name
-                elif direction == "north" and loc_doors_dict["south"] == new_location.name:
-                    loc_doors_dict["south"] = loc_name
-                elif direction == "east" and loc_doors_dict["west"] == new_location.name:
-                    loc_doors_dict["west"] = loc_name
-                elif direction == "south" and loc_doors_dict["north"] == new_location.name:
-                    loc_doors_dict["north"] = loc_name
-            updated_locations.append([loc_name, loc_desc] + list(loc_doors_dict.values()))
-
-        # Add the new location
-        new_loc_entry = [new_location.name, new_location.description] + list(new_location.doors.values())
-        updated_locations.append(new_loc_entry)
-
-        # Write updated locations back to CSV
-        with open(csv_path, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(updated_locations)
+        for direction, loc_name in new_doors.items():
+            if loc_name and loc_name not in [loc.name for loc in existing_loc]:
+                raise ValueError(f"Location in direction {direction} does not exist: {loc_name}")

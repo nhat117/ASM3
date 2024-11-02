@@ -3,56 +3,54 @@ ENERGY_PLUS_RATE = 1
 
 
 class Item:
-    def __init__(self, name, description, can_be_picked=True, effect=None):
+    def __init__(self, name, desc, is_pickable=True, effect=None):
+        """Initialize the Item object."""
         self._name = name
-        self._description = description
-        self._can_be_picked = can_be_picked  # Some items can't be picked (e.g., trees)
+        self._desc = desc
+        self._is_pickable = is_pickable
         self._effect = (
-            effect  # Effect of the item (e.g., "restore_energy", "grant_immunity")
+            effect
         )
 
     @property
     def name(self):
+        """Getter for name"""
         return self._name
 
     @name.setter
     def name(self, new_name):
+        """Setter for name"""
         self._name = new_name
 
     @property
-    def description(self):
-        return self._description
+    def desc(self):
+        """Getter for Description"""
+        return self._desc
 
-    @description.setter
-    def description(self, new_description):
-        self._description = new_description
+    @desc.setter
+    def desc(self, desc):
+        """Setter for Description"""
+        self._desc = desc
 
     @property
-    def can_be_picked(self):
-        return self._can_be_picked
+    def is_pickable(self):
+        """Getter for is_pickable"""
+        return self._is_pickable
 
-    @can_be_picked.setter
-    def can_be_picked(self, new_can_be_picked):
-        if isinstance(new_can_be_picked, bool):
-            self._can_be_picked = new_can_be_picked
+    @is_pickable.setter
+    def is_pickable(self, is_pickable):
+        """Setter for can_be_picked"""
+        if isinstance(is_pickable, bool):
+            self._is_pickable = is_pickable
         else:
-            raise ValueError("can_be_picked must be a boolean value.")
+            raise ValueError("must be a boolean value.")
 
     @property
     def effect(self):
+        """Getter for effect"""
         return self._effect
 
     @effect.setter
     def effect(self, new_effect):
+        """Setter for effect"""
         self._effect = new_effect
-
-    def apply(self, pymon):
-        """Apply the effect of the item to the Pymon."""
-        if self._effect == "restore_energy":
-            pymon.energy = min(MAX_ENERGY, pymon.energy + ENERGY_PLUS_RATE)
-            print(
-                f"{pymon.nickname}'s energy is restored! Energy: {pymon.energy}/{MAX_ENERGY}"
-            )
-        elif self._effect == "grant_immunity":
-            pymon.has_immunity = True
-            print(f"{pymon.nickname} is now immune for one battle!")

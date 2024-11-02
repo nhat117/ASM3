@@ -17,7 +17,7 @@ class GameLoader:
         """Initialize the game state."""
         self.record = Record()
 
-    def load_record_data(self, args):
+    def load_record(self, args):
         """Load record data based on the number of command-line arguments."""
         if len(args) == 1:
             self.record.load_data()
@@ -49,13 +49,13 @@ class GameLoader:
         """
         print(usage)
 
-    def start_game(self, args):
+    def start(self, args):
         """Start the game, load data, and initialize Pymon."""
         if "--help" in args:
             self.show_help()
             return
 
-        self.load_record_data(args)
+        self.load_record(args)
 
         pymon = Pymon(
             "Kimimon",

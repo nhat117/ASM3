@@ -53,6 +53,7 @@ class Operation:
 
     @game_state.setter
     def game_state(self, new_game_state):
+        """Setter for the game state."""
         self._game_state = new_game_state
 
     def display_setup(self):
@@ -66,7 +67,7 @@ class Operation:
         print("###### Locations ##########")
         for location in self._record.locations:
             print(f"\nLocation: {location.name}")
-            print(f"Description: {location.description}")
+            print(f"Description: {location.desc}")
             print("Connections:")
             if location.doors:
                 has_connections = False
@@ -91,15 +92,15 @@ class Operation:
             for item in location.items:
                 print(f"\nItem: {item.name}")
                 print(f"Location: {location.name}")
-                print(f"Can be picked: {item.can_be_picked}")
+                print(f"Can be picked: {item.is_pickable}")
 
         # Display Creatures
         print("\n###### Creatures ##########")
         for creature in self._record.creatures:
             print(f"\nCreature: {creature.nickname}")
-            print(f"Description: {creature.description}")
+            print(f"Description: {creature.desc}")
             print(
-                f"Location: {creature.location.name if creature.location else 'Unknown'}"
+                f"Location: {creature.loc.name if creature.loc else 'Unknown'}"
             )
             print(f"Is Pymon: {isinstance(creature, Pymon)}")
 
@@ -130,7 +131,7 @@ class Operation:
             if user_command == 1:
                 self.inspect_pymon_submenu()
             elif user_command == 2:
-                self.pymon.location.inspect()
+                self.pymon.loc.inspect()
             elif user_command == 3:
                 self.move_pymon()
             elif user_command == 4:
@@ -148,7 +149,7 @@ class Operation:
             elif user_command == 10:
                 self.add_custom_location()
             elif user_command == 11:
-                self.add_custom_creature()
+                self.add_creature()
             elif user_command == 12:
                 self.display_setup()
             elif user_command == 13:
@@ -160,7 +161,8 @@ class Operation:
 
     def inspect_pymon_submenu(self):
         """Display submenu for Inspect Pymon."""
-        print("\n1.1) Inspect current Pymon")
+        print("\n")
+        print("1.1) Inspect current Pymon")
         print("1.2) Switch active Pymon")
         sub_command = input("Enter your sub-command: ")
         if sub_command == "1.1":
@@ -185,7 +187,7 @@ class Operation:
         """Pick an item from the current location."""
         item_name = input("Picking what item?: ").lower()
         item = next(
-            (i for i in self.pymon.location.items if i.name.lower() == item_name), None
+            (i for i in self.pymon.loc.items if i.name.lower() == item_name), None
         )
         if item:
             self.pymon.pick_item(item)
@@ -199,23 +201,25 @@ class Operation:
     def challenge_creature(self):
         """Challenge a creature in the current location."""
         creature_name = input("Challenge who?: ").lower()
-        creature = None
-        for c in self.pymon.location.creatures:
+        creature_tmp = None
+        for c in self.pymon.loc.creatures:
             if c.nickname.lower() == creature_name:
-                creature = c
+                creature_tmp = c
                 break
-        if creature:
+        # Check if the creature is a Pymon
+        if creature_tmp:
             try:
-                if isinstance(creature, Animal):
-                    print(f"The {creature.nickname} just ignored you.")
+                # If the creature is an Animal, ignore the challenge
+                if isinstance(creature_tmp, Animal):
+                    print(f"The {creature_tmp.nickname} just ignored you.")
                     return
-
-                captured_pymon = self.pymon.challenge(creature)
+                captured_pymon = self.pymon.challenge(creature_tmp)  # Challenge the Pymon
+                # If the Pymon is captured, add it to the bench
                 if captured_pymon and isinstance(captured_pymon, Pymon):
                     self._game_state.bench_pymons.append(
                         {
                             "nickname": captured_pymon.nickname,
-                            "description": captured_pymon.description,
+                            "description": captured_pymon.desc,
                             "inventory": [],
                             "stats": {
                                 "energy": MAX_ENERGY,
@@ -240,7 +244,7 @@ class Operation:
         save_file = input("Enter save file name (default: save2024.csv): ").strip()
         if not save_file:
             save_file = "save2024.csv"
-        self._record.save_game_state(save_file, self._pymon)
+        self.record.save_game_state(save_file, self._pymon)
         print(f"Game progress saved to {save_file}")
 
     def load_game(self):
@@ -254,8 +258,8 @@ class Operation:
         try:
             loaded_pymon = self._record.load_game_state(save_file)
             if loaded_pymon:
-                self._pymon = loaded_pymon
-                self._game_state = self._record._game_state
+                self.pymon = loaded_pymon
+                self.game_state = self.record.game_state
                 print(f"Game progress loaded from {save_file}")
                 self.generate_stats()
             else:
@@ -278,7 +282,7 @@ class Operation:
         while True:
             index = self.get_user_pymon()
             if index is not None:
-                selected_pymon = self._game_state.bench_pymons[index]
+                selected_pymon = self.game_state.bench_pymons[index]
                 if self.check_energy(selected_pymon):
                     self.switch_pymon(index, selected_pymon)
                     return
@@ -290,7 +294,7 @@ class Operation:
         choice = input("Enter the number of the Pymon you want to switch to: ")
         try:
             index = int(choice) - 1
-            if 0 <= index < len(self._game_state.bench_pymons):
+            if 0 <= index < len(self.game_state.bench_pymons):
                 return index
             else:
                 print("Invalid Pymon number.")
@@ -306,25 +310,25 @@ class Operation:
         """Switch to the selected Pymon, update stats and inventory."""
         current_pymon_data = self.save_current_pymon()
 
-        new_pymon = self.create_new_pymon(selected_pymon)
+        pymon_tmp = self.create_new_pymon(selected_pymon)
 
         # Set up new Pymon's stats and inventory
-        self.set_stats(new_pymon, selected_pymon)
-        self.set_inventory(new_pymon, selected_pymon)
+        self.set_stats(pymon_tmp, selected_pymon)
+        self.set_inventory(pymon_tmp, selected_pymon)
 
         # Update the bench with the current Pymon data
         self.game_state.bench_pymons[index] = current_pymon_data
 
         # Switch active Pymon
-        self.pymon = new_pymon
-        print(f"\nSwitched to {new_pymon.nickname}!")
-        print(f"Energy: {new_pymon.energy}/{MAX_ENERGY}")
+        self.pymon = pymon_tmp
+        print(f"\nSwitched to {pymon_tmp.nickname}!")
+        print(f"Energy: {pymon_tmp.energy}/{MAX_ENERGY}")
 
     def save_current_pymon(self):
         """Save the current Pymon's data to the bench."""
         return {
             "nickname": self.pymon.nickname,
-            "description": self.pymon.description,
+            "description": self.pymon.desc,
             "inventory": [item.name for item in self.pymon.inventory],
             "stats": {
                 "energy": self.pymon.energy,
@@ -339,7 +343,7 @@ class Operation:
         return Pymon(
             selected_pymon["nickname"],
             selected_pymon["description"],
-            self.pymon.location,
+            self.pymon.loc,
         )
 
     def set_stats(self, new_pymon, selected_pymon):
@@ -386,17 +390,19 @@ class Operation:
 
         self.view_pymons()
         choice = self.get_pymon_switch_choice()
+        # If a valid choice is made, switch to the selected Pymon
         if choice is not None:
+            # Save the current Pymon's data
             selected_pymon = self.game_state.bench_pymons[choice]
             current_pymon_data = self.save_current_pymon()
             new_pymon = self.create_new_pymon(selected_pymon)
-
+            # Set up new Pymon's stats and inventory
             self.set_stats(new_pymon, selected_pymon)
             self.set_inventory(new_pymon, selected_pymon)
             self.update_bench(choice, current_pymon_data)
-
+            # Switch active Pymon
             self.pymon = new_pymon
-            self.display_switch_success(new_pymon)
+            self.switch_success(new_pymon)
 
     def get_pymon_switch_choice(self):
         """Prompt user for the Pymon they want to switch to."""
@@ -420,7 +426,7 @@ class Operation:
         """Update the bench with the current Pymon's data."""
         self.game_state.bench_pymons[index] = current_pymon_data
 
-    def display_switch_success(self, new_pymon):
+    def switch_success(self, new_pymon):
         """Display success message after switching to a new Pymon."""
         print(f"\nSwitched to {new_pymon.nickname}!")
         print(f"Energy: {new_pymon.energy}/3")
@@ -441,11 +447,11 @@ class Operation:
     def generate_stats(self):
         """Generate and display stats."""
         print(f"\nPymon {self.pymon.nickname} Stats:")
-        print(f"Description: {self.pymon.description}")
+        print(f"Description: {self.pymon.desc}")
         print(f"Energy: {self.pymon.energy}/3")
         print(f"Inventory: {', '.join([item.name for item in self.pymon.inventory])}")
         print(
-            f"Location: {self.pymon.location.name if self.pymon.location else 'None'}"
+            f"Location: {self.pymon.loc.name if self.pymon.loc else 'None'}"
         )
         print(f"Has Immunity: {'Yes' if self.pymon.has_immunity else 'No'}")
         print(f"Move Count: {self.pymon.move_count}")
@@ -454,74 +460,101 @@ class Operation:
             self.pymon.display_battle_stats()
 
     def add_custom_location(self):
-        """Handle add custom location"""
-        # Get location details with validation for blank fields
+        """Main function to handle adding a custom location."""
+        # Get location details
+        name, desc = self.get_loc_details()
+        if not name or not desc:
+            return
+
+        # Get door connections
+        doors, has_connection = self.get_door_connections()
+        if not has_connection:
+            print("Error: At least one connection must be specified")
+            return
+
+        # Create and add location
+        self.create_and_add_loc(name, desc, doors)
+
+    def get_loc_details(self):
+        """Prompt for and validate location details."""
         name = input("Enter location name: ").strip()
         if not name:
             print("Error: Location name cannot be blank")
-            return
+            return None, None
 
-        description = input("Enter location description: ").strip()
-        if not description:
+        desc = input("Enter location description: ").strip()
+        if not desc:
             print("Error: Location description cannot be blank")
-            return
+            return None, None
 
-        # Initialize doors dictionary
+        return name, desc
+
+    def get_door_connections(self):
+        """Prompt for door connections and validate at least one connection."""
         doors = {"west": None, "north": None, "east": None, "south": None}
         has_connection = False
-
         # Get door connections
-        for direction in ["west", "north", "east", "south"]:
-            connect = input(f"Do you want to connect a location to the {direction}? (yes/no): ").strip().lower()
+        for direction in doors.keys():
+            connect = (
+                input(
+                    f"Do you want to connect a location to the {direction}? (yes/no): "
+                )
+                .strip()
+                .lower()
+            )
+            # If user wants to connect a location
             if connect == "yes":
                 connected_loc = input(f"Enter {direction} door: ").strip()
+                # If a location is connected
                 if connected_loc:
                     doors[direction] = connected_loc
                     has_connection = True
                 else:
                     print(f"Error: Connected location name cannot be blank")
-                    return
+                    return doors, False
 
-        # Ensure at least one connection is specified
-        if not has_connection:
-            print("Error: At least one connection must be specified")
-            return
+        return doors, has_connection
 
+    def create_and_add_loc(self, name, desc, doors):
+        """Create, validate, and add a new location to the record."""
         try:
-            # Create and validate the new location
-            location_instance = Location(name, description)
-            location_instance.validate_new_location(name, doors, self.record.locations)
-
-            # Create the new location and add it to record
-            new_loc = Location(name, description)
+            # Validate and add the new location
+            location_instance = Location(name, desc)
+            location_instance.validate_new_loc(name, doors, self.record.locations)
+            # Add the location to the record
+            new_loc = Location(name, desc)
             new_loc.doors = doors
             self.record.locations.append(new_loc)
 
-            # Update the CSV file with bi-directional connections
-            self.update_locations_csv(new_loc)
+            self.update_loc_csv(new_loc)
             print("Custom location added successfully.")
-
         except ValueError as e:
             print(f"Error: {str(e)}")
 
-    def update_locations_csv(self, new_location):
+    def update_loc_csv(self, new_loc):
         """Update the locations.csv file with the new location and update bi-directional connections"""
-        # Read existing locations
-        with open("locations.csv", "r") as file:
-            lines = [line.strip() for line in file.readlines() if line.strip()]
+        lines = self._read_loc_csv()
+        updated_lines = self._update_existing_loc(lines, new_loc)
+        new_line = self._create_new_loc_data(new_loc)
+        updated_lines.append(new_line)
+        self._write_csv_loc(updated_lines)
 
-        # Update existing locations for bi-directional connections
+    def _read_loc_csv(self):
+        with open("locations.csv", "r") as file:
+            return [line.strip() for line in file.readlines() if line.strip()]
+
+    def _update_existing_loc(self, lines, new_location):
         updated_lines = []
         for line in lines:
-            parts = [part.strip() for part in line.split(',')]
+            parts = [part.strip() for part in line.split(",")]
             if len(parts) >= 6:  # Ensure line has all required parts
                 loc_name = parts[0]
                 loc_desc = parts[1]
                 doors = {
-                    "west": parts[2].split('=')[1].strip(),
-                    "north": parts[3].split('=')[1].strip(),
-                    "east": parts[4].split('=')[1].strip(),
-                    "south": parts[5].split('=')[1].strip()
+                    "west": parts[2].split("=")[1].strip(),
+                    "north": parts[3].split("=")[1].strip(),
+                    "east": parts[4].split("=")[1].strip(),
+                    "south": parts[5].split("=")[1].strip(),
                 }
 
                 # Update bi-directional connections
@@ -531,43 +564,47 @@ class Operation:
                             "west": "east",
                             "east": "west",
                             "north": "south",
-                            "south": "north"
+                            "south": "north",
                         }[direction]
                         doors[opposite_direction] = new_location.name
 
                 # Create updated line
-                updated_line = (f"{loc_name}, {loc_desc}, "
-                              f"west = {doors['west']}, "
-                              f"north = {doors['north']}, "
-                              f"east = {doors['east']}, "
-                              f"south = {doors['south']}")
+                updated_line = (
+                    f"{loc_name}, {loc_desc}, "
+                    f"west = {doors['west']}, "
+                    f"north = {doors['north']}, "
+                    f"east = {doors['east']}, "
+                    f"south = {doors['south']}"
+                )
                 updated_lines.append(updated_line)
+        return updated_lines
 
-        # Add the new location
-        new_line = (f"{new_location.name}, {new_location.description}, "
-                   f"west = {new_location.doors['west']}, "
-                   f"north = {new_location.doors['north']}, "
-                   f"east = {new_location.doors['east']}, "
-                   f"south = {new_location.doors['south']}")
-        updated_lines.append(new_line)
+    def _create_new_loc_data(self, new_loc):
+        return (
+            f"{new_loc.name}, {new_loc.desc}, "
+            f"west = {new_loc.doors['west']}, "
+            f"north = {new_loc.doors['north']}, "
+            f"east = {new_loc.doors['east']}, "
+            f"south = {new_loc.doors['south']}"
+        )
 
-        # Write all locations back to CSV
+    def _write_csv_loc(self, updated_lines):
         with open("locations.csv", "w") as file:
             file.write("\n".join(updated_lines) + "\n")
 
-    def add_custom_creature(self):
+    def add_creature(self):
         """Handle add custom creature"""
         # Get creature details with validation for blank fields
         nickname = input("Enter creature nickname: ").strip()
         if not nickname:
             print("Error: Creature nickname cannot be blank")
             return
-
-        description = input("Enter creature description: ").strip()
-        if not description:
+        # Get creature description with validation for blank fields
+        desc = input("Enter creature description: ").strip()
+        if not desc:
             print("Error: Creature description cannot be blank")
             return
-
+        # Get adoptable field with validation for 'yes' or 'no'
         adoptable = input("Is this creature adoptable (yes/no)?: ").strip().lower()
         if not adoptable or adoptable not in ["yes", "no"]:
             print("Error: Adoptable field must be either 'yes' or 'no'")
@@ -575,9 +612,9 @@ class Operation:
 
         # Create the creature
         creature = (
-            Pymon(nickname, description)
+            Pymon(nickname, desc)
             if adoptable == "yes"
-            else Animal(nickname, description)
+            else Animal(nickname, desc)
         )
 
         # Add to record
@@ -585,8 +622,8 @@ class Operation:
 
         # Read existing content
         try:
-            with open("creatures.csv", "r") as file:
-                lines = file.readlines()
+            with open("creatures.csv", "r") as f:
+                lines = f.readlines()
                 # Remove any empty lines at the end
                 while lines and not lines[-1].strip():
                     lines.pop()
@@ -594,9 +631,9 @@ class Operation:
             lines = []
 
         # Write the new creature
-        with open("creatures.csv", "a") as file:
-            if lines and not lines[-1].endswith('\n'):
-                file.write('\n')  # Add newline if the last line doesn't have one
-            file.write(f"{nickname}, {description}, {adoptable}\n")
-        
+        with open("creatures.csv", "a") as f:
+            if lines and not lines[-1].endswith("\n"):
+                f.write("\n")  # Add newline if the last line doesn't have one
+            f.write(f"{nickname}, {desc}, {adoptable}\n")
+
         print("Custom creature added successfully.")

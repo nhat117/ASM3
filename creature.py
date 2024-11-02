@@ -11,10 +11,10 @@ WIN_THRESHOLD = 2
 
 
 class Creature:
-    def __init__(self, nickname, description, location=None):
+    def __init__(self, nickname, desc, loc=None):
         self._nickname = nickname
-        self._description = description
-        self._location = location
+        self._desc = desc
+        self._loc = loc
 
     @property
     def nickname(self):
@@ -25,26 +25,26 @@ class Creature:
         self._nickname = new_nickname
 
     @property
-    def description(self):
-        return self._description
+    def desc(self):
+        return self._desc
 
-    @description.setter
-    def description(self, new_description):
-        self._description = new_description
+    @desc.setter
+    def desc(self, new_description):
+        self._desc = new_description
 
     @property
-    def location(self):
-        return self._location
+    def loc(self):
+        return self._loc
 
-    @location.setter
-    def location(self, new_location):
-        self._location = new_location
+    @loc.setter
+    def loc(self, new_location):
+        self._loc = new_location
 
 
 # Pymon class (inherits Creature)
 class Pymon(Creature):
-    def __init__(self, nickname, description, location=None):
-        super().__init__(nickname, description, location)
+    def __init__(self, nickname, desc, loc=None):
+        super().__init__(nickname, desc, loc)
         self._energy = MAX_ENERGY
         self._inventory = []  # Pymon inventory to store items
         self._has_immunity = False
@@ -110,7 +110,7 @@ class Pymon(Creature):
             print("The tree is just for decoration and cannot be picked up.")
             return
 
-        if item.can_be_picked:
+        if item.is_pickable:
             self.inventory.append(item)
             print(f"You picked up {item.name} from the ground!")
         else:
@@ -124,7 +124,7 @@ class Pymon(Creature):
             )
             # Display in a list
             for index, item in enumerate(self.inventory, start=1):
-                print(f"{index}) {item.name} - {item.description}")
+                print(f"{index}) {item.name} - {item.desc}")
 
             # Allow user to select an item to use
             item_choice = input("Select an item number to use or press Enter to skip: ")
@@ -141,8 +141,8 @@ class Pymon(Creature):
 
     def move(self, direction, game_state=None):
         """Move in the specified direction. Returns True if energy is depleted."""
-        if direction in self.location.doors and self.location.doors[direction]:
-            self.location = self.location.doors[direction]
+        if direction in self.loc.doors and self.loc.doors[direction]:
+            self.loc = self.loc.doors[direction]
             self.display_new_location()
 
             self.move_count += 1
@@ -159,9 +159,9 @@ class Pymon(Creature):
 
     def display_new_location(self):
         """Display information about the new location after moving."""
-        print(f"You traveled and arrived at {self.location.name}.")
+        print(f"You traveled and arrived at {self.loc.name}.")
         print("Creatures in the new location:")
-        for creature in self.location.creatures:
+        for creature in self.loc.creatures:
             print(f"- {creature.nickname}")
 
     def decrease_energy(self):
@@ -174,7 +174,15 @@ class Pymon(Creature):
     def handle_energy_depletion(self, game_state):
         """Handle the situation when the Pymon is out of energy."""
         print(f"{self.nickname} is out of energy and escaped into the wild!")
+        
+        # Remove the Pymon from the bench
         if game_state and game_state.bench_pymons:
+            # Find and remove the current Pymon from the bench
+            for i, pymon in enumerate(game_state.bench_pymons):
+                if pymon['nickname'] == self.nickname:
+                    game_state.bench_pymons.pop(i)
+                    break
+            
             available_pymons = self.get_available_pymons(game_state.bench_pymons)
             if available_pymons:
                 print("\nYou must switch to a Pymon that still has energy!")
@@ -207,7 +215,7 @@ class Pymon(Creature):
         sys.exit(0)
 
     def inspect(self):
-        print(f"Pymon {self.nickname}: {self.description}, Energy: {self._energy}/{MAX_ENERGY}")
+        print(f"Pymon {self.nickname}: {self.desc}, Energy: {self._energy}/{MAX_ENERGY}")
 
     def challenge(self, creature):
         print(f"{creature.nickname} gladly accepted your challenge! Ready for battle!")
@@ -221,7 +229,7 @@ class Pymon(Creature):
             opponent_choice = self.get_move_opponent()
             print(f"Your opponent issued {opponent_choice}!")
 
-            result = self.resolve_battle(player_choice, opponent_choice)
+            result = self.battle_judge(player_choice, opponent_choice)
             wins, losses = self.update_battle_results(result, wins, losses)
 
         self.handle_immunity_removal(had_immunity)
@@ -299,24 +307,24 @@ class Pymon(Creature):
 
     def capture_creature(self, creature):
         """Remove the captured creature from its location and set its location to None."""
-        if creature.location and hasattr(creature.location, "creatures"):
-            creature.location.creatures.remove(creature)
-        creature.location = None
+        if creature.loc and hasattr(creature.loc, "creatures"):
+            creature.loc.creatures.remove(creature)
+        creature.loc = None
 
     def display_battle_stats(self):
         """Get and display the battle statistics for the Pymon."""
-        total_wins, total_draws, total_losses = 0, 0, 0
+        total_w, total_d, total_l = 0, 0, 0
         print(f'Pymon Nickname: "{self.nickname}"')
         for i, stat in enumerate(self._battle_stats, start=1):
             print(
                 f"Battle {i}, {stat['timestamp']} Opponent: \"{stat['opponent']}\", W: {stat['wins']} D: {stat['draws']} L: {stat['losses']}"
             )
-            total_wins += stat["wins"]
-            total_draws += stat["draws"]
-            total_losses += stat["losses"]
-        print(f"Total: W: {total_wins} D: {total_draws} L: {total_losses}")
+            total_w += stat["wins"]
+            total_d += stat["draws"]
+            total_l += stat["losses"]
+        print(f"Total: W: {total_w} D: {total_d} L: {total_l}")
 
-    def resolve_battle(self, player_choice, opponent_choice):
+    def battle_judge(self, player_choice, opponent_choice):
         """Resolve the rock-paper-scissor battle."""
         outcomes = {
             ("r", "r"): "draw",
@@ -365,8 +373,8 @@ class Pymon(Creature):
 
     def use_magic_potion(self, item):
         """Handle the case where a magic potion is used."""
-        if not self._has_immunity:
-            self._has_immunity = True
+        if not self.has_immunity:
+            self.has_immunity = True
             print(
                 f"{self.nickname} used the magic potion and is now immune for one battle."
             )
@@ -389,12 +397,12 @@ class Pymon(Creature):
     def view_curr_loc(self):
         """Display information about the current location."""
         location_description = []
-        if self.location.creatures:
-            creatures = [c.nickname for c in self.location.creatures if c != self]
+        if self.loc.creatures:
+            creatures = [c.nickname for c in self.loc.creatures if c != self]
             if creatures:
                 location_description.append(", ".join(creatures))
 
-        for dir, loc in self.location.doors.items():
+        for dir, loc in self.loc.doors.items():
             if loc:
                 location_description.append(f"in the {dir} is {loc.name}")
 
@@ -405,20 +413,20 @@ class Pymon(Creature):
 
     def view_connected_loc(self, direction):
         """Display information about a connected location in a given direction."""
-        if direction in self.location.doors and self.location.doors[direction]:
-            connected_location = self.location.doors[direction]
+        if direction in self.loc.doors and self.loc.doors[direction]:
+            connected_loc = self.loc.doors[direction]
             items = (
-                [item.name for item in connected_location.items]
-                if hasattr(connected_location, "items")
+                [item.name for item in connected_loc.items]
+                if hasattr(connected_loc, "items")
                 else []
             )
             if items:
                 print(
-                    f"In the {direction}, there seems to be {connected_location.name} with {', '.join(items)}"
+                    f"In the {direction}, there seems to be {connected_loc.name} with {', '.join(items)}"
                 )
             else:
                 print(
-                    f"In the {direction}, there seems to be {connected_location.name}"
+                    f"In the {direction}, there seems to be {connected_loc.name}"
                 )
         else:
             print("This direction leads nowhere")
@@ -428,9 +436,9 @@ class Pymon(Creature):
 class Animal(Creature):
     """Class representing an animal in the game. An nimal cannot be pickup or used in battle."""
 
-    def __init__(self, nickname, description, location=None):
-        super().__init__(nickname, description, location)
+    def __init__(self, nickname, desc, loc=None):
+        super().__init__(nickname, desc, loc)
 
     def inspect(self):
         """Inspect the animal and display its details."""
-        print(f"Animal {self.nickname}: {self.description}")
+        print(f"Animal {self.nickname}: {self.desc}")

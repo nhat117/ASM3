@@ -57,12 +57,13 @@ class Record:
             # Store current Pymon
             if current_pymon:
                 self._current_pymon = current_pymon
+                # Update game state with current Pymon data
                 self._game_state.user_pymon = {
                     "nickname": current_pymon.nickname,
-                    "description": current_pymon.description,
+                    "description": current_pymon.desc,
                     "location": (
-                        current_pymon.location.name
-                        if current_pymon.location
+                        current_pymon.loc.name
+                        if current_pymon.loc
                         else "None"
                     ),
                     "stats": {
@@ -77,7 +78,7 @@ class Record:
             # Update game state with current data
             for location in self._locations:
                 self._game_state.locations[location.name] = {
-                    "description": location.description,
+                    "description": location.desc,
                     "connections": {
                         dir: loc.name for dir, loc in location.doors.items() if loc
                     },
@@ -85,8 +86,8 @@ class Record:
 
             for creature in self._creatures:
                 self._game_state.creatures[creature.nickname] = {
-                    "description": creature.description,
-                    "location": creature.location.name if creature.location else "None",
+                    "description": creature.desc,
+                    "location": creature.loc.name if creature.loc else "None",
                     "is_pymon": isinstance(creature, Pymon),
                 }
 
@@ -104,9 +105,9 @@ class Record:
 
             # Reconstruct game components
             location_dict = self._reconstruct_locations()
-            self._creatures = self._reconstruct_creatures(location_dict)
-            self._current_pymon = self._reconstruct_user_pymon(location_dict)
-            self._reconstruct_bench_pymons()
+            self._creatures = self._creatures_reader(location_dict)
+            self._current_pymon = self._user_pymon_reader(location_dict)
+            self._bench_pymons_reader()
 
             print(f"Game state loaded from {file_path}")
             return self._current_pymon
@@ -134,7 +135,7 @@ class Record:
 
         return location_dict
 
-    def _reconstruct_creatures(self, location_dict):
+    def _creatures_reader(self, location_dict):
         """Reconstruct all creatures from the saved game state."""
         creatures = []
         for name, data in self._game_state.creatures.items():
@@ -145,14 +146,14 @@ class Record:
             )
 
             if data["location"] != "None" and data["location"] in location_dict:
-                creature.location = location_dict[data["location"]]
-                creature.location.add_creature(creature)
+                creature.loc = location_dict[data["location"]]
+                creature.loc.add_creature(creature)
 
             creatures.append(creature)
 
         return creatures
 
-    def _reconstruct_user_pymon(self, location_dict):
+    def _user_pymon_reader(self, location_dict):
         """Reconstruct the current user's Pymon if it exists in the saved game state."""
         user_data = self._game_state.user_pymon
         if user_data and isinstance(user_data, dict):
@@ -160,10 +161,10 @@ class Record:
 
             # Set location
             if (
-                user_data["location"] != "None"
-                and user_data["location"] in location_dict
+                    user_data["location"] != "None"
+                    and user_data["location"] in location_dict
             ):
-                current_pymon.location = location_dict[user_data["location"]]
+                current_pymon.loc = location_dict[user_data["location"]]
 
             # Set stats
             stats = user_data.get("stats", {})
@@ -190,7 +191,7 @@ class Record:
                     location.items.remove(item)
                     break
 
-    def _reconstruct_bench_pymons(self):
+    def _bench_pymons_reader(self):
         """Reconstruct bench Pymons from the saved game state."""
         bench_pymons = []
         for pymon_data in self._game_state.bench_pymons:
@@ -203,10 +204,10 @@ class Record:
         self._game_state.bench_pymons = bench_pymons
 
     def load_data(
-        self,
-        locations_file="locations.csv",
-        creatures_file="creatures.csv",
-        items_file="items.csv",
+            self,
+            locations_file="locations.csv",
+            creatures_file="creatures.csv",
+            items_file="items.csv",
     ):
         try:
             self._locations = self._load_locations(locations_file)
@@ -219,9 +220,9 @@ class Record:
     def _load_locations(self, filename):
         try:
             locations = []
-            location_dict = {}  # Dictionary to map location names to Location objects
-            with open(filename, "r") as file:
-                for line in file:
+            location_tmp = {}  # Dictionary to map location names to Location objects
+            with open(filename, "r") as f:
+                for line in f:
                     line = line.strip()
                     if not line:
                         continue
@@ -229,22 +230,22 @@ class Record:
                     name, description, *doors = parts
                     location = Location(name.strip(), description.strip())
                     locations.append(location)
-                    location_dict[name.strip()] = (
+                    location_tmp[name.strip()] = (
                         location  # Map name to Location object
                     )
 
             # Second pass to connect locations
-            with open(filename, "r") as file:
-                for line in file:
+            with open(filename, "r") as f:
+                for line in f:
                     line = line.strip()
                     if not line:
                         continue
                     parts = line.split(",")
                     name, description, *doors = parts
-                    location = location_dict[name.strip()]
+                    location = location_tmp[name.strip()]
                     for door in doors:
                         direction, connected_location_name = door.split("=")
-                        connected_location = location_dict.get(
+                        connected_location = location_tmp.get(
                             connected_location_name.strip()
                         )
                         if connected_location:
@@ -275,8 +276,8 @@ class Record:
             location_count = len(self._locations)
             for i, creature in enumerate(creatures):
                 location_index = i % location_count
-                creature.location = self._locations[location_index]
-                creature.location.add_creature(creature)  # Add creature to the location
+                creature.loc = self._locations[location_index]
+                creature.loc.add_creature(creature)  # Add creature to the location
 
             # Debug: Print creatures assigned to each location
             for location in self._locations:
@@ -289,23 +290,23 @@ class Record:
 
     def _load_items(self, filename):
         try:
-            with open(filename, "r") as file:
-                for line in file:
+            with open(filename, "r") as f:
+                for line in f:
                     line = line.strip()
                     if not line:
                         continue
                     parts = line.split(",")
                     name, description = parts
-                    can_be_picked = (
-                        name.strip().lower() != "tree"
+                    is_pickable = (
+                            name.strip().lower() != "tree"
                     )  # Trees cannot be picked up
-                    item = Item(name.strip(), description.strip(), can_be_picked)
+                    item = Item(name.strip(), description.strip(), is_pickable)
                     location = random.choice(self._locations)
                     location.add_item(item)
                     # Update game state
                     self._game_state.items[item.name] = {
                         "location": location.name,
-                        "can_be_picked": can_be_picked,
+                        "is_pickable": is_pickable,
                     }
 
         except Exception as e:

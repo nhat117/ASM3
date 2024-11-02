@@ -4,10 +4,12 @@ import sys
 
 def main():
     """Main function to start the game."""
-    game = GameLoader()
-    game.start_game(sys.argv)
+    try:
+        game = GameLoader()
+        game.start(sys.argv)
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
-
-## Main Programm Start Here
+# Entry point of the game
 if __name__ == "__main__":
     main()
