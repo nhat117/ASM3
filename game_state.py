@@ -26,93 +26,21 @@ class GameState:
 
     def _parse_line(self, line):
         """Helper method to parse CSV lines into parts."""
-        return [p.strip() for p in line.split(",")]
+        parts = []
+        for p in line.split(","):
+            parts.append(p.strip())
+        return parts
 
     def _parse_inventory(self, inventory_str):
         """Helper method to parse inventory string into a list of items."""
         if not inventory_str:
             return []
-        return [item.strip() for item in inventory_str.split(",")]
 
-    def handle_pymon_defeat(self):
-        """Handle the case when the current Pymon is defeated."""
-        if not self.bench_pymons:
-            return None  # No backup Pymons available
+        inventory_items = []
+        for item in inventory_str.split(","):
+            inventory_items.append(item.strip())
 
-        # Get the next Pymon from the bench
-        next_pymon = self.bench_pymons.pop(0)
-
-        # Inherit inventory from defeated Pymon
-        if self.user_pymon and "inventory" in self.user_pymon:
-            next_pymon["inventory"].extend(self.user_pymon.get("inventory", []))
-
-        # Set up the new Pymon with full energy
-        self.user_pymon = {
-            "nickname": next_pymon["nickname"],
-            "description": next_pymon["description"],
-            "location": self.user_pymon.get("location", None),
-            "stats": {
-                "energy": self.MAX_ENERGY,  # Full energy for new Pymon
-                "has_immunity": False,
-                "move_count": 0,
-                "battle_stats": []
-            },
-            "inventory": next_pymon["inventory"]
-        }
-
-        return self.user_pymon
-
-    def restore_captured_pymon(self, pymon_name, description):
-        """Restore a re-captured Pymon to full energy."""
-        return {
-            "nickname": pymon_name,
-            "description": description,
-            "location": None,
-            "stats": {
-                "energy": self.MAX_ENERGY,  # Full energy when re-captured
-                "has_immunity": False,
-                "move_count": 0,
-                "battle_stats": []
-            },
-            "inventory": []
-        }
-
-    def display_setup(self):
-        """
-        Display the current setup of the game world including locations, connections,
-        items, and creatures. This is for testing purposes only.
-        """
-        print("\n##### Game World Setup #####\n")
-
-        # Display Locations and their connections
-        print("##### Locations #####")
-        for loc_name, data in self.locations.items():
-            print(f"\nLocation: {loc_name}")
-            print(f"Description: {data.get('description', '')}")
-            print("Connections:")
-            connections = data.get("connections", {})
-            if connections:
-                for direction, connected_loc in connections.items():
-                    print(f"  {direction} -> {connected_loc}")
-            else:
-                print("  No connections")
-
-        # Display Items and their locations
-        print("\n##### Items #####")
-        for item_name, data in self.items.items():
-            loc = data.get("location", "Unknown")
-            is_pickable = data.get("is_pickable", True)
-            print(f"\nItem: {item_name}")
-            print(f"Location: {loc}")
-            print(f"Can be picked: {is_pickable}")
-
-        # Display Creatures and their locations
-        print("\n#### Creatures #####")
-        for creature_name, data in self.creatures.items():
-            print(f"\nCreature: {creature_name}")
-            print(f"Description: {data.get('description', '')}")
-            print(f"Location: {data.get('location', 'Unknown')}")
-            print(f"Is Pymon: {data.get('is_pymon', False)}")
+        return inventory_items
 
     def save_game(self, file_path="save2024.csv"):
         """

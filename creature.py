@@ -276,9 +276,7 @@ class Pymon(Creature):
     def handle_immunity_removal(self, had_immunity):
         """Remove the magic potion from inventory if immunity was used."""
         if had_immunity:
-            for item in self.inventory[
-                        :
-                        ]:  # Create a copy to safely modify during iteration
+            for item in self.inventory.copy():  # Avoid modifying inventory directly
                 if item.name.lower() == "magic potion":
                     self.inventory.remove(item)
                     break
@@ -299,13 +297,13 @@ class Pymon(Creature):
     def handle_outcome(self, creature, wins):
         if wins == WIN_THRESHOLD:
             print(f"Congrats! You won the battle and captured {creature.nickname}!")
-            self.capture_creature(creature)
+            self.capture(creature)
             return creature
         else:
             print("You lost the battle!")
             return None
 
-    def capture_creature(self, creature):
+    def capture(self, creature):
         """Remove the captured creature from its location and set its location to None."""
         if creature.loc and hasattr(creature.loc, "creatures"):
             creature.loc.creatures.remove(creature)
@@ -396,23 +394,23 @@ class Pymon(Creature):
 
     def view_curr_loc(self):
         """Display information about the current location."""
-        location_description = []
+        loc_desc = []
         if self.loc.creatures:
             creatures = []
             for c in self.loc.creatures:
                 if c != self:
                     creatures.append(c.nickname)
             if creatures:
-                location_description.append(", ".join(creatures))
+                loc_desc.append(", ".join(creatures))
 
         for direction, loc in self.loc.doors.items():
             if loc:
-                location_description.append(f"in the {direction} is {loc.name}")
+                loc_desc.append(f"in the {direction} is {loc.name}")
 
-        if location_description:
-            print(", ".join(location_description))
+        if loc_desc:
+            print(", ".join(loc_desc))
         else:
-            print("Nothing  in the current location.")
+            print(" in the current location.")
 
     def view_connected_loc(self, direction):
         """Display information about a connected location in a given direction."""

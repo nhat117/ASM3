@@ -1,0 +1,252 @@
+@startuml
+
+skinparam classAttributeIconSize 0
+
+abstract class Creature {
+  - nickname: str
+  - desc: str
+  - loc: Location
+  + nickname()
+  + nickname(new_nickname)
+  + desc()
+  + desc(new_description)
+  + loc()
+  + loc(new_location)
+  + inspect()
+}
+
+class Pymon {
+  - battle_stats: dict
+  - energy: int
+  - inventory: list
+  - has_immunity: bool
+  - move_count: int
+  + battle_stats()
+  + battle_stats(new_stats)
+  + energy()
+  + energy(new_energy)
+  + inventory()
+  + inventory(new_inventory)
+  + has_immunity()
+  + has_immunity(new_immunity)
+  + move_count()
+  + move_count(new_move_count)
+  + pick_item(item)
+  + view_inventory()
+  + move(direction, game_state)
+  + display_new_location()
+  + decrease_energy()
+  + handle_energy_depletion(game_state)
+  + get_available_pymons(bench_pymons)
+  + create_temp_pymon(pymon_data)
+  + end_game()
+  + inspect()
+  + challenge(creature)
+  + get_player_choice()
+  + get_move_opponent()
+  + update_battle_results(res, wins, lose)
+  + handle_player_lose()
+  + handle_immunity_removal(had_immunity)
+  + generate_stats(creature, wins, draws, losses)
+  + handle_outcome(creature, wins)
+  + capture(creature)
+  + display_battle_stats()
+  + battle_judge(player_choice, opponent_choice)
+  + use_item(item)
+  + use_tree(item)
+  + use_apple(item)
+  + use_magic_potion(item)
+  + use_binocular()
+  + view_curr_loc()
+  + view_connected_loc(direction)
+}
+
+class Animal {
+  + inspect()
+}
+
+class Item {
+  - name: str
+  - desc: str
+  - is_pickable: bool
+  - is_consumable: bool
+  - effect: str
+  + name()
+  + name(new_name)
+  + desc()
+  + desc(new_desc)
+  + is_pickable()
+  + is_pickable(is_pickable)
+  + is_consumable()
+  + is_consumable(is_consumable)
+  + effect()
+  + effect(new_effect)
+}
+
+class Location {
+  - name: str
+  - desc: str
+  - doors: dict
+  - creatures: list
+  - items: list
+  + name()
+  + name(new_name)
+  + desc()
+  + desc(new_description)
+  + doors()
+  + doors(new_doors)
+  + creatures()
+  + creatures(new_creatures)
+  + items()
+  + items(new_items)
+  + add_creature(creature)
+  + add_item(item)
+  + inspect()
+  + validate_new_loc(new_name, new_doors, existing_loc)
+}
+
+class GameState {
+  - {static} instance: GameState
+  + save_game(file_path)
+  + load_game(file_path)
+  - _parse_line(line)
+  - _parse_inventory(inventory_str)
+  - _save_items(f)
+  - _save_locations(f)
+  - _save_creatures(f)
+  - _save_user_pymon(f)
+  - _save_stats_battle(f, battle_stats)
+  - _save_bench(f)
+  + load_item_data(line)
+  + load_loc(line)
+  + load_creature(line)
+  + load_user_pymon(lines)
+  + load_battle_stats(line, battle_stats)
+  + load_bench(line)
+}
+
+class Operation {
+  - {static} instance: Operation
+  - pymon: Pymon
+  - record: Record
+  - game_state: GameState
+  + pymon()
+  + pymon(new_pymon)
+  + record()
+  + record(new_record)
+  + game_state()
+  + game_state(new_game_state)
+  + display_setup()
+  + display_menu()
+  + command_multiplexer(command)
+  + inspect_pymon_submenu()
+  + move_pymon()
+  + pick_item()
+  + view_inventory()
+  + challenge_creature()
+  + display_battle_stats()
+  + save_game()
+  + load_game()
+  + quit()
+  + switch_pymon_compulsory()
+  + get_user_pymon()
+  + check_energy(pymon)
+  + switch_pymon(index, selected_pymon)
+  + save_current_pymon()
+  + create_new_pymon(selected_pymon)
+  + set_stats(new_pymon, selected_pymon)
+  + set_inventory(new_pymon, selected_pymon)
+  + view_pymons()
+  + switch_active_pymon()
+  + get_pymon_switch_choice()
+  + update_bench(index, current_pymon_data)
+  + switch_success(new_pymon)
+  + menu()
+  + generate_stats()
+  + add_custom_location()
+  + get_loc_details()
+  + get_door_connections()
+  + create_and_add_loc(name, desc, doors)
+  + update_loc_csv(new_loc)
+  - _read_loc_csv()
+  - _update_existing_loc(lines, new_location)
+  - _create_new_loc_data(new_loc)
+  - _write_csv_loc(updated_lines)
+  + add_creature()
+}
+
+class Record {
+  - {static} instance: Record
+  - locations: list
+  - creatures: list
+  - current_pymon: Pymon
+  - game_state: GameState
+  + locations()
+  + locations(new_locations)
+  + creatures()
+  + creatures(new_creatures)
+  + current_pymon()
+  + current_pymon(new_pymon)
+  + game_state()
+  + game_state(new_game_state)
+  + save_game_state(file_path, current_pymon)
+  + load_game_state(file_path)
+  - _reconstruct_locations()
+  - _creatures_reader(location_dict)
+  - _user_pymon_reader(location_dict)
+  - _set_pymon_inventory(pymon, inventory)
+  - _bench_pymons_reader()
+  + load_data()
+  - _load_loc_list(filename)
+  - _load_creatures(filename)
+  - _load_items(filename)
+}
+
+class GameLoader {
+  - {static} instance: GameLoader
+  + load_record(args)
+  + show_help()
+  + start(args)
+}
+
+package "Exceptions" {
+  class GameError {
+    + __init__(msg)
+  }
+  class InvalidDirectionException {
+    + __init__(msg)
+  }
+  class InvalidInputFileFormat {
+    + __init__(msg)
+  }
+  class AnimalCaptureError {
+    + __init__()
+  }
+}
+
+' Inheritance relationships
+Creature <|-- Pymon
+Creature <|-- Animal
+GameError <|-- InvalidDirectionException
+GameError <|-- InvalidInputFileFormat
+GameError <|-- AnimalCaptureError
+
+' Associations
+Pymon "1" *-- "0..*" Item : contains >
+Location "1" *-- "0..*" Item : contains >
+Location "1" *-- "0..*" Creature : contains >
+Creature "0..1" -- "1" Location : located in >
+Operation "1" -- "1" Pymon : manages >
+Operation "1" -- "1" Record : uses >
+Operation "1" -- "1" GameState : uses >
+Record "1" -- "1..*" Location : tracks >
+Record "1" -- "1..*" Creature : tracks >
+Record "1" -- "1" GameState : manages >
+
+note "Singleton" as N1
+GameState .. N1
+Operation .. N1
+Record .. N1
+GameLoader .. N1
+
+@enduml
