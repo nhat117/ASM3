@@ -3,14 +3,13 @@ ENERGY_PLUS_RATE = 1
 
 
 class Item:
-    def __init__(self, name, desc, is_pickable=True, effect=None):
+    def __init__(self, name, desc, is_pickable=True, is_consumable=False, effect=None):
         """Initialize the Item object."""
         self._name = name
         self._desc = desc
         self._is_pickable = is_pickable
-        self._effect = (
-            effect
-        )
+        self._is_consumable = is_consumable
+        self._effect = effect
 
     @property
     def name(self):
@@ -42,6 +41,19 @@ class Item:
         """Setter for can_be_picked"""
         if isinstance(is_pickable, bool):
             self._is_pickable = is_pickable
+        else:
+            raise ValueError("must be a boolean value.")
+
+    @property
+    def is_consumable(self):
+        """Getter for is_consumable"""
+        return self._is_consumable
+
+    @is_consumable.setter
+    def is_consumable(self, is_consumable):
+        """Setter for is_consumable"""
+        if isinstance(is_consumable, bool):
+            self._is_consumable = is_consumable
         else:
             raise ValueError("must be a boolean value.")
 

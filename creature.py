@@ -174,7 +174,7 @@ class Pymon(Creature):
     def handle_energy_depletion(self, game_state):
         """Handle the situation when the Pymon is out of energy."""
         print(f"{self.nickname} is out of energy and escaped into the wild!")
-        
+
         # Remove the Pymon from the bench
         if game_state and game_state.bench_pymons:
             # Find and remove the current Pymon from the bench
@@ -182,7 +182,7 @@ class Pymon(Creature):
                 if pymon['nickname'] == self.nickname:
                     game_state.bench_pymons.pop(i)
                     break
-            
+
             available_pymons = self.get_available_pymons(game_state.bench_pymons)
             if available_pymons:
                 print("\nYou must switch to a Pymon that still has energy!")
@@ -398,18 +398,21 @@ class Pymon(Creature):
         """Display information about the current location."""
         location_description = []
         if self.loc.creatures:
-            creatures = [c.nickname for c in self.loc.creatures if c != self]
+            creatures = []
+            for c in self.loc.creatures:
+                if c != self:
+                    creatures.append(c.nickname)
             if creatures:
                 location_description.append(", ".join(creatures))
 
-        for dir, loc in self.loc.doors.items():
+        for direction, loc in self.loc.doors.items():
             if loc:
-                location_description.append(f"in the {dir} is {loc.name}")
+                location_description.append(f"in the {direction} is {loc.name}")
 
         if location_description:
             print(", ".join(location_description))
         else:
-            print("Nothing notable in the current location.")
+            print("Nothing  in the current location.")
 
     def view_connected_loc(self, direction):
         """Display information about a connected location in a given direction."""

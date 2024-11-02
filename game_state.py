@@ -5,6 +5,7 @@ from exceptions import GameError
 
 class GameState:
     _instance = None
+    MAX_ENERGY = 3  # Maximum energy level for Pymons
 
     def __new__(cls, *args, **kwargs):
         """Implement singleton pattern to ensure only one GameState instance."""
@@ -22,6 +23,49 @@ class GameState:
             self.locations = {}  # Dictionary to store location states
             self.creatures = {}  # Dictionary to store creature states
             self._initialized = True  # Mark as initialized to prevent reinitialization
+
+    def handle_pymon_defeat(self):
+        """Handle the case when the current Pymon is defeated."""
+        if not self.bench_pymons:
+            return None  # No backup Pymons available
+        
+        # Get the next Pymon from the bench
+        next_pymon = self.bench_pymons.pop(0)
+        
+        # Inherit inventory from defeated Pymon
+        if self.user_pymon and "inventory" in self.user_pymon:
+            next_pymon["inventory"].extend(self.user_pymon.get("inventory", []))
+        
+        # Set up the new Pymon with full energy
+        self.user_pymon = {
+            "nickname": next_pymon["nickname"],
+            "description": next_pymon["description"],
+            "location": self.user_pymon.get("location", None),
+            "stats": {
+                "energy": self.MAX_ENERGY,  # Full energy for new Pymon
+                "has_immunity": False,
+                "move_count": 0,
+                "battle_stats": []
+            },
+            "inventory": next_pymon["inventory"]
+        }
+        
+        return self.user_pymon
+
+    def restore_captured_pymon(self, pymon_name, description):
+        """Restore a re-captured Pymon to full energy."""
+        return {
+            "nickname": pymon_name,
+            "description": description,
+            "location": None,
+            "stats": {
+                "energy": self.MAX_ENERGY,  # Full energy when re-captured
+                "has_immunity": False,
+                "move_count": 0,
+                "battle_stats": []
+            },
+            "inventory": []
+        }
 
     def display_setup(self):
         """
@@ -66,25 +110,26 @@ class GameState:
         [Items], [Locations], [Creatures], [UserPymon], [BenchPymons].
         """
         try:
-            with open(file_path, "w") as file:
-                self._save_items(file)
-                self._save_locations(file)
-                self._save_creatures(file)
-                self._save_user_pymon(file)
-                self._save_bench(file)
+            with open(file_path, "w") as f:
+                self._save_items(f)
+                self._save_locations(f)
+                self._save_creatures(f)
+                self._save_user_pymon(f)
+                self._save_bench(f)
 
             print(f"Game saved successfully to {file_path}")
 
         except Exception as e:
             raise GameError(f"Failed to save game: {str(e)}")
 
-    def _save_items(self, file):
+    def _save_items(self, f):
         """Save all items to the file."""
-        file.write("[Items]\n")
+        f.write("[Items]\n")
         for item_name, data in self.items.items():
             location = data.get("location", "None")
             is_pickable = data.get("is_pickable", True)
-            file.write(f"{item_name}, {location}, {is_pickable}\n")
+            is_consumable = data.get("is_consumable", False)
+            f.write(f"{item_name}, {location}, {is_pickable}, {is_consumable}\n")
 
     def _save_locations(self, f):
         """Save all locations to the file."""
@@ -131,11 +176,11 @@ class GameState:
 
         self._save_stats_battle(f, stats.get("battle_stats", []))
 
-    def _save_stats_battle(self, file, battle_stats):
+    def _save_stats_battle(self, f, battle_stats):
         """Save the battle statistics of the user's Pymon."""
         for stat in battle_stats:
             stat_str = f"{stat['timestamp']}, {stat['opponent']}, {stat['wins']}, {stat['draws']}, {stat['losses']}"
-            file.write(stat_str + "\n")
+            f.write(stat_str + "\n")
 
     def _save_bench(self, f):
         """Save the Pymons on the bench to the file."""
@@ -197,12 +242,13 @@ class GameState:
         if "," not in line:
             return
         parts = [p.strip() for p in line.split(",")]
-        if len(parts) < 3:
+        if len(parts) < 4:
             return
-        name, location, is_pickable = parts
+        name, location, is_pickable, is_consumable = parts
         self.items[name] = {
             "location": location,
             "is_pickable": is_pickable.lower() == "true",
+            "is_consumable": is_consumable.lower() == "true"
         }
 
     def load_loc(self, line):

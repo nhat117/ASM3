@@ -51,6 +51,31 @@ class Record:
         else:
             raise ValueError("Creatures must be a list.")
 
+    # Getter and setter for current_pymon
+    @property
+    def current_pymon(self):
+        return self._current_pymon
+
+    @current_pymon.setter
+    def current_pymon(self, new_pymon):
+        if isinstance(new_pymon, Pymon):
+            self._current_pymon = new_pymon
+        else:
+            raise ValueError("Current Pymon must be a Pymon object.")
+
+    # Game state getter
+    @property
+    def game_state(self):
+        return self._game_state
+
+    # Game state setter
+    @game_state.setter
+    def game_state(self, new_game_state):
+        if isinstance(new_game_state, GameState):
+            self._game_state = new_game_state
+        else:
+            raise ValueError("Game state must be a GameState object.")
+
     def save_game_state(self, file_path="save2024.csv", current_pymon=None):
         """Save the current game state."""
         try:
@@ -185,7 +210,11 @@ class Record:
         for item_name in inventory:
             # Find the item in locations
             for location in self._locations:
-                item = next((i for i in location.items if i.name == item_name), None)
+                item = None
+                for i in location.items:
+                    if i.name == item_name:
+                        item = i
+                        break
                 if item:
                     pymon.inventory.append(item)
                     location.items.remove(item)
@@ -210,46 +239,53 @@ class Record:
             items_file="items.csv",
     ):
         try:
-            self._locations = self._load_locations(locations_file)
+            self._locations = self._load_loc_list(locations_file)
             self._creatures = self._load_creatures(creatures_file)
             self._load_items(items_file)
         except InvalidInputFileFormat as e:
             print(e)
             sys.exit(0)
 
-    def _load_locations(self, filename):
+    def _load_loc_list(self, filename):
         try:
             locations = []
             location_tmp = {}  # Dictionary to map location names to Location objects
             with open(filename, "r") as f:
+                next(f)  # Skip header line
                 for line in f:
                     line = line.strip()
                     if not line:
                         continue
                     parts = line.split(",")
-                    name, description, *doors = parts
-                    location = Location(name.strip(), description.strip())
-                    locations.append(location)
-                    location_tmp[name.strip()] = (
-                        location  # Map name to Location object
-                    )
+                    name, description, west, north, east, south = parts
+                    loc = Location(name.strip(), description.strip())
+                    locations.append(loc)
+                    location_tmp[name.strip()] = loc
 
             # Second pass to connect locations
             with open(filename, "r") as f:
+                next(f)  # Skip header line
                 for line in f:
                     line = line.strip()
                     if not line:
                         continue
                     parts = line.split(",")
-                    name, description, *doors = parts
-                    location = location_tmp[name.strip()]
-                    for door in doors:
-                        direction, connected_location_name = door.split("=")
-                        connected_location = location_tmp.get(
-                            connected_location_name.strip()
-                        )
-                        if connected_location:
-                            location.doors[direction.strip()] = connected_location
+                    name, description, west, north, east, south = parts
+                    loc = location_tmp[name.strip()]
+                    
+                    # Set connections based on directions
+                    directions = {
+                        'west': west.strip(),
+                        'north': north.strip(),
+                        'east': east.strip(),
+                        'south': south.strip()
+                    }
+                    
+                    for direction, connected_name in directions.items():
+                        if connected_name != 'None':
+                            connected_location = location_tmp.get(connected_name)
+                            if connected_location:
+                                loc.doors[direction] = connected_location
 
             return locations
         except Exception as e:
@@ -258,8 +294,9 @@ class Record:
     def _load_creatures(self, filename):
         try:
             creatures = []
-            with open(filename, "r") as file:
-                for line in file:
+            with open(filename, "r") as f:
+                next(f)  # Skip header line
+                for line in f:
                     line = line.strip()
                     if not line:
                         continue
@@ -273,17 +310,12 @@ class Record:
                     creatures.append(creature)
 
             # Randomly assign creatures to locations
-            location_count = len(self._locations)
+            location_count = len(self.locations)
             for i, creature in enumerate(creatures):
                 location_index = i % location_count
-                creature.loc = self._locations[location_index]
+                creature.loc = self.locations[location_index]
                 creature.loc.add_creature(creature)  # Add creature to the location
 
-            # Debug: Print creatures assigned to each location
-            for location in self._locations:
-                print(f"Location: {location.name}")
-                for creature in location.creatures:
-                    print(f"- {creature.nickname}")
             return creatures
         except Exception as e:
             raise InvalidInputFileFormat(f"Error loading creatures: {e}")
@@ -291,22 +323,26 @@ class Record:
     def _load_items(self, filename):
         try:
             with open(filename, "r") as f:
+                next(f)  # Skip header line
                 for line in f:
                     line = line.strip()
                     if not line:
                         continue
-                    parts = line.split(",")
-                    name, description = parts
-                    is_pickable = (
-                            name.strip().lower() != "tree"
-                    )  # Trees cannot be picked up
-                    item = Item(name.strip(), description.strip(), is_pickable)
-                    location = random.choice(self._locations)
-                    location.add_item(item)
+                    parts = [part.strip() for part in line.split(",")]
+                    name, description, pickable, consumable = parts
+                    
+                    # Convert string values to boolean
+                    is_pickable = pickable.lower() == "yes"
+                    is_consumable = consumable.lower() == "yes"
+                    
+                    item = Item(name, description, is_pickable, is_consumable)
+                    loc = random.choice(self.locations)  # Randomly assign items to locations
+                    loc.add_item(item)
                     # Update game state
-                    self._game_state.items[item.name] = {
-                        "location": location.name,
+                    self.game_state.items[item.name] = {
+                        "location": loc.name,
                         "is_pickable": is_pickable,
+                        "is_consumable": is_consumable
                     }
 
         except Exception as e:

@@ -70,22 +70,22 @@ class Location:
 
     def add_creature(self, creature):
         """Add a creature to the location."""
-        self._creatures.append(creature)
+        self.creatures.append(creature)
 
     def add_item(self, item):
         """Add an item to the location."""
-        self._items.append(item)
+        self.items.append(item)
 
     def inspect(self):
         """Inspect the location and display its details."""
         print(f"You are at {self._name}. {self._desc}")
-        if self._creatures:
-            for creature in self._creatures:
+        if self.creatures:
+            for creature in self.creatures:
                 print(f"Creature present: {creature.nickname} - {creature.desc}")
         else:
             print("No creatures here.")
-        if self._items:
-            for item in self._items:
+        if self.items:
+            for item in self.items:
                 print(f"Item present: {item.name} - {item.desc}")
         else:
             print("No items here.")
@@ -97,7 +97,12 @@ class Location:
             raise ValueError("Location name must be specified.")
 
         # Ensure at least one direction is not None
-        if all(direction is None for direction in new_doors.values()):
+        all_none = True
+        for direction in new_doors.values():
+            if direction is not None:
+                all_none = False
+                break
+        if all_none:
             raise ValueError("At least one direction must be specified.")
 
         # Check for unique location name

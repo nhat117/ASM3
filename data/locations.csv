@@ -1,4 +1,6 @@
-Playground, an outdoor playground with slide and swing clearly visible., west = School, north = Beach, east = None,  south = None
-Beach, a wide open white sanded beach with a brown hill on the side., west = None, north = None, east = None, south = Playground
-School, a secondary school for local creatures with 3 two-story buildings., west = None, north = None, east = Playground,  south = None
-
+name,description,west,north,east,south
+Playground, an outdoor playground with slide and swing clearly visible., School, Beach, None, None
+Beach, a wide open white sanded beach with a brown hill on the side., None, None, Forrest, Playground
+School, a secondary school for local creatures with 3 two-story buildings., None, None, Playground, None
+Forrest, a long winding road deep into the green with large trees on the sides., Beach, None, None, Cave 
+Cave, a dark mysterious cave., None, Forrest, None, None 

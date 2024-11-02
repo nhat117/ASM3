@@ -186,9 +186,11 @@ class Operation:
     def pick_item(self):
         """Pick an item from the current location."""
         item_name = input("Picking what item?: ").lower()
-        item = next(
-            (i for i in self.pymon.loc.items if i.name.lower() == item_name), None
-        )
+        item = None
+        for i in self.pymon.loc.items:
+            if i.name.lower() == item_name:
+                item = i
+                break
         if item:
             self.pymon.pick_item(item)
         else:
@@ -216,7 +218,7 @@ class Operation:
                 captured_pymon = self.pymon.challenge(creature_tmp)  # Challenge the Pymon
                 # If the Pymon is captured, add it to the bench
                 if captured_pymon and isinstance(captured_pymon, Pymon):
-                    self._game_state.bench_pymons.append(
+                    self.game_state.bench_pymons.append(
                         {
                             "nickname": captured_pymon.nickname,
                             "description": captured_pymon.desc,
@@ -256,7 +258,7 @@ class Operation:
             save_file = "save2024.csv"
 
         try:
-            loaded_pymon = self._record.load_game_state(save_file)
+            loaded_pymon = self.record.load_game_state(save_file)
             if loaded_pymon:
                 self.pymon = loaded_pymon
                 self.game_state = self.record.game_state
@@ -304,11 +306,15 @@ class Operation:
 
     def check_energy(self, pymon):
         """Check if the selected Pymon has energy."""
-        return "stats" in pymon and pymon["stats"].get("energy", 0) > 0
+        res = False
+        if "stats" in pymon:
+            if pymon["stats"].get("energy", 0) > 0:
+                res = True
+        return res
 
     def switch_pymon(self, index, selected_pymon):
         """Switch to the selected Pymon, update stats and inventory."""
-        current_pymon_data = self.save_current_pymon()
+        tmp_data = self.save_current_pymon()
 
         pymon_tmp = self.create_new_pymon(selected_pymon)
 
@@ -317,7 +323,7 @@ class Operation:
         self.set_inventory(pymon_tmp, selected_pymon)
 
         # Update the bench with the current Pymon data
-        self.game_state.bench_pymons[index] = current_pymon_data
+        self.game_state.bench_pymons[index] = tmp_data
 
         # Switch active Pymon
         self.pymon = pymon_tmp
@@ -359,9 +365,11 @@ class Operation:
         if selected_pymon.get("inventory"):
             for item_name in selected_pymon["inventory"]:
                 for location in self.record.locations:
-                    item = next(
-                        (i for i in location.items if i.name == item_name), None
-                    )
+                    item = None
+                    for i in location.items:
+                        if i.name == item_name:
+                            item = i
+                            break
                     if item:
                         new_pymon.inventory.append(item)
                         location.items.remove(item)
@@ -519,8 +527,8 @@ class Operation:
         """Create, validate, and add a new location to the record."""
         try:
             # Validate and add the new location
-            location_instance = Location(name, desc)
-            location_instance.validate_new_loc(name, doors, self.record.locations)
+            tmp_loc = Location(name, desc)
+            tmp_loc.validate_new_loc(name, doors, self.record.locations)
             # Add the location to the record
             new_loc = Location(name, desc)
             new_loc.doors = doors
@@ -546,7 +554,9 @@ class Operation:
     def _update_existing_loc(self, lines, new_location):
         updated_lines = []
         for line in lines:
-            parts = [part.strip() for part in line.split(",")]
+            parts = []
+            for part in line.split(","):
+                parts.append(part.strip())
             if len(parts) >= 6:  # Ensure line has all required parts
                 loc_name = parts[0]
                 loc_desc = parts[1]
