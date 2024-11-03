@@ -4,34 +4,34 @@ from exceptions import GameError
 
 
 class GameState:
-    _instance = None
+    __instance = None
     MAX_ENERGY = 3  # Maximum energy level for Pymons
 
     def __new__(cls, *args, **kwargs):
         """Implement singleton pattern to ensure only one GameState instance."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
 
     def __init__(self):
         """Initialize the game state with items, Pymons, user Pymon, and locations."""
-        if not hasattr(self, "_initialized"):  # To prevent reinitialization
+        if not hasattr(self, "__initialized"):  # To prevent reinitialization
             self.items = {}  # Dictionary to store items and their locations
             self.pymons = {}  # Dictionary to store Pymons' locations and stats
             self.user_pymon = {"location": None, "stats": {}, "inventory": []}
             self.bench_pymons = []  # List to store captured Pymons
             self.locations = {}  # Dictionary to store location states
             self.creatures = {}  # Dictionary to store creature states
-            self._initialized = True  # Mark as initialized to prevent reinitialization
+            self.__initialized = True  # Mark as initialized to prevent reinitialization
 
-    def _parse_line(self, line):
+    def __parse_line(self, line):
         """Helper method to parse CSV lines into parts."""
         parts = []
         for p in line.split(","):
             parts.append(p.strip())
         return parts
 
-    def _parse_inventory(self, inventory_str):
+    def __parse_inventory(self, inventory_str):
         """Helper method to parse inventory string into a list of items."""
         if not inventory_str:
             return []
@@ -49,18 +49,18 @@ class GameState:
         """
         try:
             with open(file_path, "w") as f:
-                self._save_items(f)
-                self._save_locations(f)
-                self._save_creatures(f)
-                self._save_user_pymon(f)
-                self._save_bench(f)
+                self.__save_items(f)
+                self.__save_locations(f)
+                self.__save_creatures(f)
+                self.__save_user_pymon(f)
+                self.__save_bench(f)
 
             print(f"Game saved successfully to {file_path}")
 
         except Exception as e:
             raise GameError(f"Failed to save game: {str(e)}")
 
-    def _save_items(self, f):
+    def __save_items(self, f):
         """Save all items to the file."""
         f.write("[Items]\n")
         for item_name, data in self.items.items():
@@ -69,7 +69,7 @@ class GameState:
             is_consumable = data.get("is_consumable", False)
             f.write(f"{item_name}, {location}, {is_pickable}, {is_consumable}\n")
 
-    def _save_locations(self, f):
+    def __save_locations(self, f):
         """Save all locations to the file."""
         f.write("[Locations]\n")
         for loc_name, data in self.locations.items():
@@ -85,7 +85,7 @@ class GameState:
             line = f"{loc_name}, {desc}, {', '.join(connections_list)}\n"
             f.write(line)
 
-    def _save_creatures(self, f):
+    def __save_creatures(self, f):
         """Save all creatures to the file."""
         f.write("[Creatures]\n")
         for creature_name, data in self.creatures.items():
@@ -94,7 +94,7 @@ class GameState:
             is_pymon = data.get("is_pymon", False)
             f.write(f"{creature_name}, {desc}, {loc}, {is_pymon}\n")
 
-    def _save_user_pymon(self, f):
+    def __save_user_pymon(self, f):
         """Save the current user's Pymon to the file."""
         f.write("[UserPymon]\n")
         user_pymon = self.user_pymon
@@ -117,15 +117,15 @@ class GameState:
                 inventory.append(item.name)
         f.write(", ".join(inventory) + "\n")
 
-        self._save_stats_battle(f, stats.get("battle_stats", []))
+        self.__save_stats_battle(f, stats.get("battle_stats", []))
 
-    def _save_stats_battle(self, f, battle_stats):
+    def __save_stats_battle(self, f, battle_stats):
         """Save the battle statistics of the user's Pymon."""
         for stat in battle_stats:
             stat_str = f"{stat['timestamp']}, {stat['opponent']}, {stat['wins']}, {stat['draws']}, {stat['losses']}"
             f.write(stat_str + "\n")
 
-    def _save_bench(self, f):
+    def __save_bench(self, f):
         """Save the Pymons on the bench to the file."""
         f.write("[BenchPymons]\n")
         for pymon in self.bench_pymons:
@@ -189,7 +189,7 @@ class GameState:
         """Load an item from the save file."""
         if "," not in line:
             return
-        parts = self._parse_line(line)
+        parts = self.__parse_line(line)
         if len(parts) < 4:
             return
         name, location, is_pickable, is_consumable = parts
@@ -203,7 +203,7 @@ class GameState:
         """Load a location from the save file."""
         if "," not in line:
             return
-        parts = self._parse_line(line)
+        parts = self.__parse_line(line)
         if len(parts) < 3:
             return
         name = parts[0]
@@ -213,7 +213,10 @@ class GameState:
         connections_dict = {}
         for conn in parts[2:]:
             if "=" in conn:
-                direction, loc = [p.strip() for p in conn.split("=")]
+                split_conn = conn.split("=")
+                direction = split_conn[0].strip()
+                loc = split_conn[1].strip()
+
                 if loc.lower() != "none":
                     connections_dict[direction] = loc
 
@@ -226,7 +229,7 @@ class GameState:
         """Load a creature from the save file."""
         if "," not in line:
             return
-        parts = self._parse_line(line)
+        parts = self.__parse_line(line)
         if len(parts) < 4:
             return
         name, desc, loc, is_pymon = parts
@@ -242,7 +245,7 @@ class GameState:
             return
 
         # First line contains nickname and description
-        parts = self._parse_line(lines[0])
+        parts = self.__parse_line(lines[0])
         if len(parts) < 2:
             return
         nickname, desc = parts
@@ -251,13 +254,13 @@ class GameState:
         location = lines[1].strip()
 
         # Third line contains stats
-        stats_parts = self._parse_line(lines[2])
+        stats_parts = self.__parse_line(lines[2])
         if len(stats_parts) < 3:
             return
         energy, has_immunity, move_count = stats_parts
 
         # Fourth line contains inventory
-        inventory = self._parse_inventory(lines[3])
+        inventory = self.__parse_inventory(lines[3])
 
         self.user_pymon = {
             "nickname": nickname,
@@ -274,7 +277,7 @@ class GameState:
 
     def load_battle_stats(self, line, battle_stats):
         """Load battle statistics for the user's Pymon."""
-        parts = self._parse_line(line)
+        parts = self.__parse_line(line)
         if len(parts) == 5:
             timestamp, opponent, wins, draws, losses = parts
             battle_stats.append({
@@ -290,11 +293,11 @@ class GameState:
         """Load a Pymon from the bench in the save file."""
         if "," not in line:
             return
-        parts = self._parse_line(line)
+        parts = self.__parse_line(line)
         if len(parts) < 3:
             return
         nickname, desc, inventory = parts
-        inventory_items = self._parse_inventory(inventory)
+        inventory_items = self.__parse_inventory(inventory)
         self.bench_pymons.append({
             "nickname": nickname,
             "description": desc,

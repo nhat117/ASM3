@@ -12,97 +12,97 @@ WIN_THRESHOLD = 2
 
 class Creature:
     def __init__(self, nickname, desc, loc=None):
-        self._nickname = nickname
-        self._desc = desc
-        self._loc = loc
+        self.__nickname = nickname
+        self.__desc = desc
+        self.__loc = loc
 
     @property
     def nickname(self):
-        return self._nickname
+        return self.__nickname
 
     @nickname.setter
     def nickname(self, new_nickname):
-        self._nickname = new_nickname
+        self.__nickname = new_nickname
 
     @property
     def desc(self):
-        return self._desc
+        return self.__desc
 
     @desc.setter
     def desc(self, new_description):
-        self._desc = new_description
+        self.__desc = new_description
 
     @property
     def loc(self):
-        return self._loc
+        return self.__loc
 
     @loc.setter
     def loc(self, new_location):
-        self._loc = new_location
+        self.__loc = new_location
 
 
 # Pymon class (inherits Creature)
 class Pymon(Creature):
     def __init__(self, nickname, desc, loc=None):
         super().__init__(nickname, desc, loc)
-        self._energy = MAX_ENERGY
-        self._inventory = []  # Pymon inventory to store items
-        self._has_immunity = False
-        self._move_count = 0
-        self._battle_stats = []
+        self.__energy = MAX_ENERGY
+        self.__inventory = []  # Pymon inventory to store items
+        self.__has_immunity = False
+        self.__move_count = 0
+        self.__battle_stats = []
 
     @property
     def battle_stats(self):
-        return self._battle_stats
+        return self.__battle_stats
 
     @battle_stats.setter
     def battle_stats(self, new_stats):
-        self._battle_stats = new_stats
+        self.__battle_stats = new_stats
 
     # Getter and setter for energy
     @property
     def energy(self):
-        return self._energy
+        return self.__energy
 
     @energy.setter
     def energy(self, new_energy):
         if 0 <= new_energy <= MAX_ENERGY:
-            self._energy = new_energy
+            self.__energy = new_energy
         else:
             # Instead of raising an error, clamp the value
-            self._energy = max(0, min(new_energy, MAX_ENERGY))
+            self.__energy = max(0, min(new_energy, MAX_ENERGY))
 
     # Getter and setter for inventory
     @property
     def inventory(self):
-        return self._inventory
+        return self.__inventory
 
     @inventory.setter
     def inventory(self, new_inventory):
         if isinstance(new_inventory, list):
-            self._inventory = new_inventory
+            self.__inventory = new_inventory
         else:
             raise ValueError("Inventory must be a list.")
 
     # Getter and setter for has_immunity
     @property
     def has_immunity(self):
-        return self._has_immunity
+        return self.__has_immunity
 
     @has_immunity.setter
     def has_immunity(self, new_immunity):
         if isinstance(new_immunity, bool):
-            self._has_immunity = new_immunity
+            self.__has_immunity = new_immunity
         else:
             raise ValueError("has_immunity must be a boolean value.")
 
     @property
     def move_count(self):
-        return self._move_count
+        return self.__move_count
 
     @move_count.setter
     def move_count(self, new_move_count):
-        self._move_count = new_move_count
+        self.__move_count = new_move_count
 
     def pick_item(self, item):
         """Attempt to pick up an item."""
@@ -168,7 +168,7 @@ class Pymon(Creature):
         """Decrease Pymon's energy after every 2 moves and display the status."""
         self.energy = self.energy - 1
         print(
-            f"{self.nickname} lost 1 energy due to movement. Energy: {self._energy}/{MAX_ENERGY}"
+            f"{self.nickname} lost 1 energy due to movement. Energy: {self.__energy}/{MAX_ENERGY}"
         )
 
     def handle_energy_depletion(self, game_state):
@@ -215,14 +215,14 @@ class Pymon(Creature):
         sys.exit(0)
 
     def inspect(self):
-        print(f"Pymon {self.nickname}: {self.desc}, Energy: {self._energy}/{MAX_ENERGY}")
+        print(f"Pymon {self.nickname}: {self.desc}, Energy: {self.__energy}/{MAX_ENERGY}")
 
     def challenge(self, creature):
         print(f"{creature.nickname} gladly accepted your challenge! Ready for battle!")
         wins, losses, draws = 0, 0, 0
-        had_immunity = self._has_immunity  # Store initial immunity state
+        had_immunity = self.__has_immunity  # Store initial immunity state
 
-        while wins < THRESHOLD and losses < THRESHOLD and self._energy > 0:
+        while wins < THRESHOLD and losses < THRESHOLD and self.__energy > 0:
             player_choice = self.get_player_choice()
             if not player_choice:
                 continue
@@ -265,11 +265,11 @@ class Pymon(Creature):
         if not self.has_immunity:
             self.energy = self.energy + LOSS_ENERGY_RATE  # Use energy setter
             print(
-                f"You lost 1 encounter and lost 1 energy. Energy: {self._energy}/{MAX_ENERGY}"
+                f"You lost 1 encounter and lost 1 energy. Energy: {self.__energy}/{MAX_ENERGY}"
             )
         else:
             print(
-                f"You lost 1 encounter but your immunity protected you. Energy: {self._energy}/{MAX_ENERGY}"
+                f"You lost 1 encounter but your immunity protected you. Energy: {self.__energy}/{MAX_ENERGY}"
             )
             self.has_immunity = False  # Remove immunity after it's used
 
@@ -313,7 +313,7 @@ class Pymon(Creature):
         """Get and display the battle statistics for the Pymon."""
         total_w, total_d, total_l = 0, 0, 0
         print(f'Pymon Nickname: "{self.nickname}"')
-        for i, stat in enumerate(self._battle_stats, start=1):
+        for i, stat in enumerate(self.__battle_stats, start=1):
             print(
                 f"Battle {i}, {stat['timestamp']} Opponent: \"{stat['opponent']}\", W: {stat['wins']} D: {stat['draws']} L: {stat['losses']}"
             )
@@ -362,10 +362,10 @@ class Pymon(Creature):
 
     def use_apple(self, item):
         """Handle the case where an apple item is used."""
-        if self._energy < 3:
-            self._energy = min(3, self._energy + 1)
-            self._inventory.remove(item)
-            print(f"{self.nickname} ate the apple. Energy: {self._energy}/3")
+        if self.__energy < 3:
+            self.__energy = min(3, self.__energy + 1)
+            self.__inventory.remove(item)
+            print(f"{self.nickname} ate the apple. Energy: {self.__energy}/3")
         else:
             print(f"{self.nickname} is already at full energy.")
 

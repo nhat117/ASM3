@@ -10,51 +10,51 @@ from item import MAX_ENERGY
 
 # Operation class
 class Operation:
-    _instance = None
+    __instance = None
 
     def __new__(cls, *args, **kwargs):
         """Implement singleton pattern to ensure only one Operation instance."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
 
     def __init__(self, pymon, record):
         """Initialize Operation with a Pymon and game record."""
-        if not hasattr(self, "_initialized"):  # To prevent reinitialization
-            self._pymon = pymon
-            self._record = record
-            self._game_state = GameState()
-            self._initialized = True  # Mark as initialized to avoid reinitialization
+        if not hasattr(self, "__initialized"):  # To prevent reinitialization
+            self.__pymon = pymon
+            self.__record = record
+            self.__game_state = GameState()
+            self.__initialized = True  # Mark as initialized to avoid reinitialization
 
     # Getter and setter for pymon
     @property
     def pymon(self):
         """Getter for the Pymon."""
-        return self._pymon
+        return self.__pymon
 
     @pymon.setter
     def pymon(self, new_pymon):
-        self._pymon = new_pymon
+        self.__pymon = new_pymon
 
     # Getter and setter for record
     @property
     def record(self):
         """Getter for the game record."""
-        return self._record
+        return self.__record
 
     @record.setter
     def record(self, new_record):
-        self._record = new_record
+        self.__record = new_record
 
     @property
     def game_state(self):
         """Getter for the game state."""
-        return self._game_state
+        return self.__game_state
 
     @game_state.setter
     def game_state(self, new_game_state):
         """Setter for the game state."""
-        self._game_state = new_game_state
+        self.__game_state = new_game_state
 
     def display_setup(self):
         """
@@ -65,7 +65,7 @@ class Operation:
 
         # Display Locations and their connections
         print("###### Locations ##########")
-        for location in self._record.locations:
+        for location in self.__record.locations:
             print(f"\nLocation: {location.name}")
             print(f"Description: {location.desc}")
             print("Connections:")
@@ -88,7 +88,7 @@ class Operation:
 
         # Display Items
         print("\n###### Items ##########")
-        for location in self._record.locations:
+        for location in self.__record.locations:
             for item in location.items:
                 print(f"\nItem: {item.name}")
                 print(f"Location: {location.name}")
@@ -96,7 +96,7 @@ class Operation:
 
         # Display Creatures
         print("\n###### Creatures ##########")
-        for creature in self._record.creatures:
+        for creature in self.__record.creatures:
             print(f"\nCreature: {creature.nickname}")
             print(f"Description: {creature.desc}")
             print(
@@ -177,7 +177,7 @@ class Operation:
         """Move Pymon to a new location."""
         direction = input("Moving to which direction?: ").lower()
         try:
-            needs_switch = self.pymon.move(direction, self._game_state)
+            needs_switch = self.pymon.move(direction, self.__game_state)
             if needs_switch:
                 self.switch_pymon_compulsory()
         except InvalidDirectionException as e:
@@ -246,7 +246,7 @@ class Operation:
         save_file = input("Enter save file name (default: save2024.csv): ").strip()
         if not save_file:
             save_file = "save2024.csv"
-        self.record.save_game_state(save_file, self._pymon)
+        self.record.save_game_state(save_file, self.__pymon)
         print(f"Game progress saved to {save_file}")
 
     def load_game(self):
@@ -541,17 +541,22 @@ class Operation:
 
     def update_loc_csv(self, new_loc):
         """Update the locations.csv file with the new location and update bi-directional connections"""
-        lines = self._read_loc_csv()
-        updated_lines = self._update_existing_loc(lines, new_loc)
-        new_line = self._create_new_loc_data(new_loc)
+        lines = self.__read_loc_csv()
+        updated_lines = self.__update_existing_loc(lines, new_loc)
+        new_line = self.__create_new_loc_data(new_loc)
         updated_lines.append(new_line)
-        self._write_csv_loc(updated_lines)
+        self.__write_csv_loc(updated_lines)
 
-    def _read_loc_csv(self):
+    def __read_loc_csv(self):
+        lines = []
         with open("locations.csv", "r") as file:
-            return [line.strip() for line in file.readlines() if line.strip()]
+            for line in file:
+                line = line.strip()
+                if line:
+                    lines.append(line)
+        return lines
 
-    def _update_existing_loc(self, lines, new_location):
+    def __update_existing_loc(self, lines, new_location):
         updated_lines = []
         for line in lines:
             parts = []
@@ -589,7 +594,7 @@ class Operation:
                 updated_lines.append(updated_line)
         return updated_lines
 
-    def _create_new_loc_data(self, new_loc):
+    def __create_new_loc_data(self, new_loc):
         return (
             f"{new_loc.name}, {new_loc.desc}, "
             f"west = {new_loc.doors['west']}, "
@@ -598,7 +603,7 @@ class Operation:
             f"south = {new_loc.doors['south']}"
         )
 
-    def _write_csv_loc(self, updated_lines):
+    def __write_csv_loc(self, updated_lines):
         with open("locations.csv", "w") as file:
             file.write("\n".join(updated_lines) + "\n")
 
