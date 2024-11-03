@@ -1,4 +1,10 @@
-# Creature class
+""""
+Assignment: Pymon Game Assignment 3
+Course: COSC2531 - Programming Fundamentals
+Author: Thomas Bui
+Student ID: s3878174
+Highest Part Attempted: HD
+"""
 from exceptions import *
 import sys
 import random

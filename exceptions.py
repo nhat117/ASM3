@@ -1,3 +1,11 @@
+""""
+Assignment: Pymon Game Assignment 3
+Course: COSC2531 - Programming Fundamentals
+Author: Thomas Bui
+Student ID: s3878174
+Highest Part Attempted: HD
+"""
+
 class InvalidDirectionException(Exception):
     """Exception raised for invalid directions."""
 

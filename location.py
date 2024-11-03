@@ -1,5 +1,3 @@
-import csv
-
 
 class Location:
     def __init__(self, name, desc):
