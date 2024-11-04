@@ -1,4 +1,4 @@
-""""
+"""
 Assignment: Pymon Game Assignment 3
 Course: COSC2531 - Programming Fundamentals
 Author: Thomas Bui
@@ -11,8 +11,9 @@ import sys
 from game_state import GameState
 from location import Location
 from creature import Pymon, Animal
-from exceptions import InvalidDirectionException, AnimalCaptureError
+from exceptions import InvalidDirectionException, AnimalCaptureError, GameError
 from item import MAX_ENERGY
+from direction import Direction
 
 
 # Operation class
@@ -33,7 +34,6 @@ class Operation:
             self.__game_state = GameState()
             self.__initialized = True  # Mark as initialized to avoid reinitialization
 
-    # Getter and setter for pymon
     @property
     def pymon(self):
         """Getter for the Pymon."""
@@ -43,7 +43,6 @@ class Operation:
     def pymon(self, new_pymon):
         self.__pymon = new_pymon
 
-    # Getter and setter for record
     @property
     def record(self):
         """Getter for the game record."""
@@ -64,36 +63,13 @@ class Operation:
         self.__game_state = new_game_state
 
     def display_setup(self):
-        """
-        Display the current setup of the game world including locations, connections,
-        items, and creatures.
-        """
+        """Display the current setup of the game world."""
         print("\n###### Game World Setup ##########\n")
 
-        # Display Locations and their connections
         print("###### Locations ##########")
-        for location in self.__record.locations:
-            print(f"\nLocation: {location.name}")
-            print(f"Description: {location.desc}")
-            print("Connections:")
-            if location.doors:
-                has_connections = False
-                for direction, connected_loc in location.doors.items():
-                    if connected_loc and connected_loc != "None":
-                        has_connections = True
-                        # If connected_loc is a Location object, use its name
-                        loc_name = (
-                            connected_loc.name
-                            if isinstance(connected_loc, Location)
-                            else connected_loc
-                        )
-                        print(f"  {direction} -> {loc_name}")
-                if not has_connections:
-                    print("  No connections")
-            else:
-                print("  No connections")
+        for location in self.record.locations:
+            location.check_connection()
 
-        # Display Items
         print("\n###### Items ##########")
         for location in self.__record.locations:
             for item in location.items:
@@ -101,7 +77,6 @@ class Operation:
                 print(f"Location: {location.name}")
                 print(f"Can be picked: {item.is_pickable}")
 
-        # Display Creatures
         print("\n###### Creatures ##########")
         for creature in self.__record.creatures:
             print(f"\nCreature: {creature.nickname}")
@@ -215,15 +190,12 @@ class Operation:
             if c.nickname.lower() == creature_name:
                 creature_tmp = c
                 break
-        # Check if the creature is a Pymon
         if creature_tmp:
             try:
-                # If the creature is an Animal, ignore the challenge
                 if isinstance(creature_tmp, Animal):
                     print(f"The {creature_tmp.nickname} just ignored you.")
                     return
-                captured_pymon = self.pymon.challenge(creature_tmp)  # Challenge the Pymon
-                # If the Pymon is captured, add it to the bench
+                captured_pymon = self.pymon.challenge(creature_tmp)
                 if captured_pymon and isinstance(captured_pymon, Pymon):
                     self.game_state.bench_pymons.append(
                         {
@@ -367,20 +339,22 @@ class Operation:
             new_pymon.move_count = selected_pymon["stats"].get("move_count", 0)
             new_pymon.battle_stats = selected_pymon["stats"].get("battle_stats", [])
 
+    def find_item_in_locations(self, item_name):
+        """Find an item by name across all locations and return the item and its location."""
+        for location in self.record.locations:
+            for item in location.items:
+                if item.name == item_name:
+                    return item, location
+        return None, None
+
     def set_inventory(self, new_pymon, selected_pymon):
         """Set the inventory for the new Pymon."""
         if selected_pymon.get("inventory"):
             for item_name in selected_pymon["inventory"]:
-                for location in self.record.locations:
-                    item = None
-                    for i in location.items:
-                        if i.name == item_name:
-                            item = i
-                            break
-                    if item:
-                        new_pymon.inventory.append(item)
-                        location.items.remove(item)
-                        break
+                item, location = self.find_item_in_locations(item_name)
+                if item:
+                    new_pymon.inventory.append(item)
+                    location.items.remove(item)
 
     def view_pymons(self):
         """Display all Pymons on the bench."""
@@ -405,17 +379,13 @@ class Operation:
 
         self.view_pymons()
         choice = self.get_pymon_switch_choice()
-        # If a valid choice is made, switch to the selected Pymon
         if choice is not None:
-            # Save the current Pymon's data
             selected_pymon = self.game_state.bench_pymons[choice]
             current_pymon_data = self.save_current_pymon()
             new_pymon = self.create_new_pymon(selected_pymon)
-            # Set up new Pymon's stats and inventory
             self.set_stats(new_pymon, selected_pymon)
             self.set_inventory(new_pymon, selected_pymon)
             self.update_bench(choice, current_pymon_data)
-            # Switch active Pymon
             self.pymon = new_pymon
             self.switch_success(new_pymon)
 
@@ -453,6 +423,7 @@ class Operation:
             print("Current inventory is empty.")
 
     def menu(self):
+        """Main menu loop."""
         while True:
             self.display_menu()
             command = input("Enter your command: ")
@@ -476,18 +447,15 @@ class Operation:
 
     def add_custom_location(self):
         """Main function to handle adding a custom location."""
-        # Get location details
         name, desc = self.get_loc_details()
         if not name or not desc:
             return
 
-        # Get door connections
         doors, has_connection = self.get_door_connections()
         if not has_connection:
             print("Error: At least one connection must be specified")
             return
 
-        # Create and add location
         self.create_and_add_loc(name, desc, doors)
 
     def get_loc_details(self):
@@ -506,10 +474,10 @@ class Operation:
 
     def get_door_connections(self):
         """Prompt for door connections and validate at least one connection."""
-        doors = {"west": None, "north": None, "east": None, "south": None}
+        doors = Direction()
         has_connection = False
-        # Get door connections
-        for direction in doors.keys():
+
+        for direction in ["west", "north", "east", "south"]:
             connect = (
                 input(
                     f"Do you want to connect a location to the {direction}? (yes/no): "
@@ -517,12 +485,18 @@ class Operation:
                 .strip()
                 .lower()
             )
-            # If user wants to connect a location
             if connect == "yes":
                 connected_loc = input(f"Enter {direction} door: ").strip()
-                # If a location is connected
                 if connected_loc:
-                    doors[direction] = connected_loc
+                    # Use property setter directly
+                    if direction == "west":
+                        doors.west = connected_loc
+                    elif direction == "north":
+                        doors.north = connected_loc
+                    elif direction == "east":
+                        doors.east = connected_loc
+                    elif direction == "south":
+                        doors.south = connected_loc
                     has_connection = True
                 else:
                     print(f"Error: Connected location name cannot be blank")
@@ -533,13 +507,11 @@ class Operation:
     def create_and_add_loc(self, name, desc, doors):
         """Create, validate, and add a new location to the record."""
         try:
-            # Validate and add the new location
             tmp_loc = Location(name, desc)
             tmp_loc.validate_new_loc(name, doors, self.record.locations)
-            # Add the location to the record
             new_loc = Location(name, desc)
             new_loc.doors = doors
-            self.record.locations.append(new_loc)
+            self.record.add_location(new_loc)
 
             self.update_loc_csv(new_loc)
             print("Custom location added successfully.")
@@ -569,45 +541,49 @@ class Operation:
             parts = []
             for part in line.split(","):
                 parts.append(part.strip())
-            if len(parts) >= 6:  # Ensure line has all required parts
+            if len(parts) >= 6:
                 loc_name = parts[0]
                 loc_desc = parts[1]
-                doors = {
-                    "west": parts[2].split("=")[1].strip(),
-                    "north": parts[3].split("=")[1].strip(),
-                    "east": parts[4].split("=")[1].strip(),
-                    "south": parts[5].split("=")[1].strip(),
-                }
 
-                # Update bi-directional connections
-                for direction, connected_loc in new_location.doors.items():
+                doors = Direction()
+                doors.west = parts[2].split("=")[1].strip()
+                doors.north = parts[3].split("=")[1].strip()
+                doors.east = parts[4].split("=")[1].strip()
+                doors.south = parts[5].split("=")[1].strip()
+
+                new_loc_doors = new_location.doors.to_dict()
+                for direction, connected_loc in new_loc_doors.items():
                     if connected_loc == loc_name:
-                        opposite_direction = {
-                            "west": "east",
-                            "east": "west",
-                            "north": "south",
-                            "south": "north",
-                        }[direction]
-                        doors[opposite_direction] = new_location.name
+                        opposite = Direction.get_opposite(direction)
+                        # Use property setter directly
+                        if opposite == "west":
+                            doors.west = new_location.name
+                        elif opposite == "north":
+                            doors.north = new_location.name
+                        elif opposite == "east":
+                            doors.east = new_location.name
+                        elif opposite == "south":
+                            doors.south = new_location.name
 
-                # Create updated line
+                doors_dict = doors.to_dict()
                 updated_line = (
                     f"{loc_name}, {loc_desc}, "
-                    f"west = {doors['west']}, "
-                    f"north = {doors['north']}, "
-                    f"east = {doors['east']}, "
-                    f"south = {doors['south']}"
+                    f"west = {doors_dict['west']}, "
+                    f"north = {doors_dict['north']}, "
+                    f"east = {doors_dict['east']}, "
+                    f"south = {doors_dict['south']}"
                 )
                 updated_lines.append(updated_line)
         return updated_lines
 
     def __create_new_loc_data(self, new_loc):
+        doors_dict = new_loc.doors.to_dict()
         return (
             f"{new_loc.name}, {new_loc.desc}, "
-            f"west = {new_loc.doors['west']}, "
-            f"north = {new_loc.doors['north']}, "
-            f"east = {new_loc.doors['east']}, "
-            f"south = {new_loc.doors['south']}"
+            f"west = {doors_dict['west']}, "
+            f"north = {doors_dict['north']}, "
+            f"east = {doors_dict['east']}, "
+            f"south = {doors_dict['south']}"
         )
 
     def __write_csv_loc(self, updated_lines):
@@ -616,46 +592,40 @@ class Operation:
 
     def add_creature(self):
         """Handle add custom creature"""
-        # Get creature details with validation for blank fields
         nickname = input("Enter creature nickname: ").strip()
         if not nickname:
             print("Error: Creature nickname cannot be blank")
             return
-        # Get creature description with validation for blank fields
+
         desc = input("Enter creature description: ").strip()
         if not desc:
             print("Error: Creature description cannot be blank")
             return
-        # Get adoptable field with validation for 'yes' or 'no'
+
         adoptable = input("Is this creature adoptable (yes/no)?: ").strip().lower()
         if not adoptable or adoptable not in ["yes", "no"]:
             print("Error: Adoptable field must be either 'yes' or 'no'")
             return
 
-        # Create the creature
         creature = (
             Pymon(nickname, desc)
             if adoptable == "yes"
             else Animal(nickname, desc)
         )
 
-        # Add to record
-        self.record.creatures.append(creature)
+        self.record.add_creature(creature)
 
-        # Read existing content
         try:
             with open("creatures.csv", "r") as f:
                 lines = f.readlines()
-                # Remove any empty lines at the end
                 while lines and not lines[-1].strip():
                     lines.pop()
         except FileNotFoundError:
             lines = []
 
-        # Write the new creature
         with open("creatures.csv", "a") as f:
             if lines and not lines[-1].endswith("\n"):
-                f.write("\n")  # Add newline if the last line doesn't have one
+                f.write("\n")
             f.write(f"{nickname}, {desc}, {adoptable}\n")
 
         print("Custom creature added successfully.")

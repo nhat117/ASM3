@@ -1,24 +1,9 @@
 [Items]
-apple, Forrest, True, True
-potion, Beach, True, True
-tree, School, False, False
-binocular, Playground, True, False
 [Locations]
-Playground, an outdoor playground with slide and swing clearly visible., west = School, north = Beach, east = None, south = None
-Beach, a wide open white sanded beach with a brown hill on the side., west = None, north = None, east = Forrest, south = Playground
-School, a secondary school for local creatures with 3 two-story buildings., west = None, north = None, east = Playground, south = None
-Forrest, a long winding road deep into the green with large trees on the sides., west = Beach, north = None, east = None, south = Cave
-Cave, a dark mysterious cave., west = None, north = Forrest, east = None, south = None
 [Creatures]
-Kitimon, large blue and white Pymon wtith yellow fangs, Playground, True
-Sheep, small fluffy animal with interesting curly white fur, Beach, False
-Marimon, medium red and yellow Pymon with a cute round face, School, True
-Gumimon, cute orange Pymon with a head like fish, Forrest, True
-Pumamon, large black Pymon that looks like a cat, Cave, True
-Chicken, looks like a food with wings but not edible, Playground, False
 [UserPymon]
 Kimimon, White and yellow Pymon with a square face
-Forrest
-3, False, 0
+Beach
+3, False, 1
 
 [BenchPymons]

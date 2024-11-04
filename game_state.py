@@ -1,14 +1,6 @@
-""""
-Assignment: Pymon Game Assignment 3
-Course: COSC2531 - Programming Fundamentals
-Author: Thomas Bui
-Student ID: s3878174
-Highest Part Attempted: HD
-"""
-
 import os
-
 from exceptions import GameError
+from direction import Direction
 
 
 class GameState:
@@ -23,14 +15,14 @@ class GameState:
 
     def __init__(self):
         """Initialize the game state with items, Pymons, user Pymon, and locations."""
-        if not hasattr(self, "__initialized"):  # To prevent reinitialization
+        if not hasattr(self, "_initialized"):  # To prevent reinitialization
             self.items = {}  # Dictionary to store items and their locations
             self.pymons = {}  # Dictionary to store Pymons' locations and stats
             self.user_pymon = {"location": None, "stats": {}, "inventory": []}
             self.bench_pymons = []  # List to store captured Pymons
             self.locations = {}  # Dictionary to store location states
             self.creatures = {}  # Dictionary to store creature states
-            self.__initialized = True  # Mark as initialized to prevent reinitialization
+            self._initialized = True  # Mark as initialized to prevent reinitialization
 
     def __parse_line(self, line):
         """Helper method to parse CSV lines into parts."""
@@ -82,7 +74,14 @@ class GameState:
         f.write("[Locations]\n")
         for loc_name, data in self.locations.items():
             desc = data.get("description", "")
-            connections = data.get("connections", {})
+            doors = data.get("connections", Direction())
+
+            # Convert Direction object to dictionary if needed
+            if isinstance(doors, Direction):
+                connections = doors.to_dict()
+            else:
+                connections = doors
+
             # Create a list of direction-location pairs in the correct format
             connections_list = []
             for direction in ["west", "north", "east", "south"]:
@@ -217,8 +216,10 @@ class GameState:
         name = parts[0]
         desc = parts[1]
 
+        # Create a new Direction object
+        doors = Direction()
+
         # Process connections
-        connections_dict = {}
         for conn in parts[2:]:
             if "=" in conn:
                 split_conn = conn.split("=")
@@ -226,11 +227,10 @@ class GameState:
                 loc = split_conn[1].strip()
 
                 if loc.lower() != "none":
-                    connections_dict[direction] = loc
-
+                    doors.set_direction(loc, direction)
         self.locations[name] = {
             "description": desc,
-            "connections": connections_dict,
+            "connections": doors,
         }
 
     def load_creature(self, line):
@@ -302,7 +302,8 @@ class GameState:
         if "," not in line:
             return
         parts = self.__parse_line(line)
-        if len(parts) < 3:
+        bench_part_length = 3
+        if len(parts) < bench_part_length:
             return
         nickname, desc, inventory = parts
         inventory_items = self.__parse_inventory(inventory)

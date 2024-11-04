@@ -1,10 +1,14 @@
+from direction import Direction
 
 class Location:
+    """
+    Location object with name, description
+    """
     def __init__(self, name, desc):
         """Initialize the Location object."""
         self.__name = name
         self.__desc = desc
-        self.__doors = {"west": None, "north": None, "east": None, "south": None}
+        self.__doors = Direction()
         self.__creatures = []
         self.__items = []
 
@@ -36,9 +40,11 @@ class Location:
     def doors(self, new_doors):
         """Setter for Doors"""
         if isinstance(new_doors, dict):
+            self.__doors.from_dict(new_doors)
+        elif isinstance(new_doors, Direction):
             self.__doors = new_doors
         else:
-            raise ValueError("Doors must be a dictionary")
+            raise ValueError("Doors must be a Direction object or dictionary")
 
     @property
     def creatures(self):
@@ -103,9 +109,15 @@ class Location:
         if not new_name:
             raise ValueError("Location name must be specified.")
 
+        # Convert Direction object to dict for validation
+        if isinstance(new_doors, Direction):
+            doors_dict = new_doors.to_dict()
+        else:
+            doors_dict = new_doors
+
         # Ensure at least one direction is not None
         all_none = True
-        for direction in new_doors.values():
+        for direction in doors_dict.values():
             if direction is not None:
                 all_none = False
                 break
@@ -124,14 +136,40 @@ class Location:
 
         # Check for similar locations
         for loc in existing_loc:
-            if loc.doors == new_doors:
-                raise ValueError("A similar location with the same connections already exists.")
+            if isinstance(loc.doors, Direction):
+                if loc.doors == new_doors:
+                    raise ValueError("A similar location with the same connections already exists.")
+            else:
+                if loc.doors == doors_dict:
+                    raise ValueError("A similar location with the same connections already exists.")
 
         # Check if all specified directions exist
         existing_loc_names = []
         for loc in existing_loc:
             existing_loc_names.append(loc.name)
 
-        for direction, loc_name in new_doors.items():
+        for direction, loc_name in doors_dict.items():
             if loc_name and loc_name not in existing_loc_names:
                 raise ValueError(f"Location in direction {direction} does not exist: {loc_name}")
+
+    def check_connection(self):
+        print(f"\nLocation: {self.name}")
+        print(f"Description: {self.desc}")
+        print("Connections:")
+        doors_dict = self.doors.to_dict()
+        if doors_dict:
+            has_connections = False
+            for direction, connected_loc in doors_dict.items():
+                if connected_loc and connected_loc != "None":
+                    has_connections = True
+                    # If connected_loc is a Location object, use its name
+                    loc_name = (
+                        connected_loc.name
+                        if isinstance(connected_loc, Location)
+                        else connected_loc
+                    )
+                    print(f"  {direction} -> {loc_name}")
+            if not has_connections:
+                print("  No connections")
+        else:
+            print("  No connections")

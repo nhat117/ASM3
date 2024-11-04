@@ -53,8 +53,11 @@ References:
  	5.	Guide of how to use sys.argv
  	•	GeeksforGeeks, “How to use sys.argv in Python,” GeeksforGeeks.org. [Online]. Available: https://www.geeksforgeeks.org/how-to-use-sys-argv-in-python/. [Accessed: 03-Nov-2024].
 
-The program have been divided into creature.py, exceptions.py, game_loader.py, game_state.py. location.py, operation.py, pymon_game.py, record.py and cannot work without any file missing
+The program have been divided into creature.py, exceptions.py, game_loader.py, game_state.py. location.py, operation.py, pymon_game.py, record.py.
+The cannot work without any listed above  file missing.
+The main program file is pymon_game.py
 
+The program is compatible with Python 3.10 due to the use of mathc case
 Known Issues:
 - **None identified at the time of submission**: 
 
@@ -65,7 +68,7 @@ import sys
 
 
 def main():
-    """Main function to start the game."""
+    """Main function to launch the game"""
     try:
         game = GameLoader()
         game.start(sys.argv)
