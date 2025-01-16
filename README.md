@@ -34,7 +34,7 @@ Welcome to the **Pokémon Game**, a command-line adventure game written in Pytho
     ```
 4. Run the game:
     ```bash
-    python main.py
+    python pymon_game.py
     ```
 
 ---
@@ -42,7 +42,7 @@ Welcome to the **Pokémon Game**, a command-line adventure game written in Pytho
 ## How to Play
 
 1. **Start the Game**:
-   Run the game using the command `python main.py` and follow the on-screen instructions.
+   Run the game using the command `python pymon_game.py` and follow the on-screen instructions.
 
 2. **Catch Pokémon**:
    When encountering wild Pokémon, choose the option to throw a Poké Ball and attempt to capture it.
@@ -60,12 +60,20 @@ Welcome to the **Pokémon Game**, a command-line adventure game written in Pytho
 
 ## Code Structure
 
-- `main.py`: Entry point of the game.
-- `pokemon.py`: Defines Pokémon classes and attributes (e.g., stats, moves).
-- `trainer.py`: Handles trainer details and battle logic.
-- `world.py`: Manages game world exploration and events.
-- `inventory.py`: Handles inventory items and their functionality.
-- `battle.py`: Implements turn-based combat mechanics.
+- `pymon_game.py`: Entry point of the game.
+- `creature.py`: Defines Pokémon classes, stats, and moves.
+- `game_loader.py`: Loads game data from CSV files (e.g., creatures, items, locations).
+- `game_state.py`: Manages the current state of the game, including player progress.
+- `item.py`: Handles item-related functionality.
+- `location.py`: Manages locations and exploration logic.
+- `operation.py`: Contains utility functions for various game operations.
+- `record.py`: Handles player save and load functionality.
+- `exceptions.py`: Defines custom exceptions for better error handling.
+- `class_diagram.puml`: PlantUML file for visualizing the game's class structure.
+- `creatures.csv`: Contains data about available Pokémon.
+- `items.csv`: Contains data about usable items.
+- `locations.csv`: Contains data about game locations.
+- `save2024.csv`: Stores the player's saved game data.
 
 ---
 
@@ -76,19 +84,3 @@ Contributions are welcome! If you have suggestions for new features or improveme
 3. Submit a pull request with a detailed description of your changes.
 
 ---
-
-## License
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
-
----
-
-## Acknowledgments
-- Inspired by the original Pokémon games by Game Freak and Nintendo.
-- Thanks to open-source Python libraries for making development easier.
-
----
-
-## Future Enhancements
-- Add more Pokémon and move sets.
-- Improve battle mechanics for more dynamic gameplay.
-- Expand the game world with more regions and quests.
